@@ -35,7 +35,7 @@ const Layout = ({ children }) => {
 
       {/* Sidebar */}
       <div
-        className={`bg-purple-800 text-white w-64 fixed h-full transition-transform duration-300 ${
+        className={`bg-purple-800 text-white w-64 fixed h-full transition-transform duration-300 z-[100] ${
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0`}
       >
