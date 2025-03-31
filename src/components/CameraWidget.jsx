@@ -1,26 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import Webcam from 'react-webcam';
 import { motion } from 'framer-motion';
 import { FiCameraOff, FiCamera } from 'react-icons/fi';
+import FaceRecognition from './Software';
 
-const CameraWidget = ({ onCapture }) => {
-  const webcamRef = useRef(null);
+const CameraWidget = ({ onCapture, registerFace, videoRef }) => {
   const [isCameraOn, setIsCameraOn] = useState(true);
-
-  const capture = () => {
-    const imageSrc = webcamRef.current.getScreenshot();
-    onCapture(imageSrc);
-  };
-
-  // Simulate face detection every 5 seconds
-  useEffect(() => {
-    if (isCameraOn) {
-      const interval = setInterval(() => {
-        capture();
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [isCameraOn]);
 
   return (
     <motion.div
@@ -40,12 +24,7 @@ const CameraWidget = ({ onCapture }) => {
       
       {isCameraOn ? (
         <div className="relative aspect-video bg-gray-100 rounded-xl overflow-hidden">
-          <Webcam
-            ref={webcamRef}
-            className="w-full h-full object-cover"
-            screenshotFormat="image/jpeg"
-            mirrored
-          />
+         <FaceRecognition registerFace={registerFace} videoRef={videoRef} />
         </div>
       ) : (
         <div className="aspect-video bg-gray-100 rounded-xl flex items-center justify-center">

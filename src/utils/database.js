@@ -12,4 +12,3 @@ export const databaseKeys = {
     const data = localStorage.getItem(key);
     return data ? JSON.parse(data) : null;
   };
-  

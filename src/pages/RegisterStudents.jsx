@@ -2,6 +2,10 @@
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { loadFromDatabase, saveToDatabase, databaseKeys } from "../utils/database";
+import * as faceapi from "face-api.js";
+import CameraWidget from '../components/CameraWidget';
+import { useRef, useState } from 'react';
+import { toast } from 'react-toastify';
 
 const RegisterStudent = () => {
   const validationSchema = Yup.object({
@@ -10,16 +14,49 @@ const RegisterStudent = () => {
     course: Yup.string().required('Required'),
   });
 
-  const handleSubmit = (values, { resetForm }) => {
+  const handleSubmit = async(values, { resetForm }) => {
     // Load existing students
+    const {matricNo} = values
     const students = loadFromDatabase(databaseKeys.STUDENTS) || [];
-    const newStudent = { ...values, id: Date.now() };
+    const existingStudent = students.find(student => student.matricNo === matricNo)
+    if(existingStudent){
+      toast.error('Student already exists')
+      return
+    }
+
+    const newStudentFaceData = await registerFace()
+    if(!newStudentFaceData){
+      return 
+    }
+    const newStudent = { ...values, id: Date.now(), faceData: newStudentFaceData };
     const updatedStudents = [...students, newStudent];
 
     // Save updated student list
     saveToDatabase(databaseKeys.STUDENTS, updatedStudents);
     console.log('Student Registered:', newStudent);
     resetForm();
+  };
+
+  const videoRef = useRef(null);
+
+  const registerFace = async () => {
+    if (!videoRef.current) return;
+
+    const detections = await faceapi.detectSingleFace(videoRef.current,
+      new faceapi.TinyFaceDetectorOptions()
+    ).withFaceLandmarks().withFaceDescriptor();
+
+    if (!detections) {
+      toast.error("No face detected. Try again!");
+      return;
+    }
+
+    const descriptor = detections.descriptor;
+    if (descriptor) {
+      return descriptor
+    } else {
+      alert("Face descriptor is missing!");
+    }
   };
 
   return (
@@ -31,6 +68,10 @@ const RegisterStudent = () => {
         onSubmit={handleSubmit}
       >
         <Form className="space-y-6 bg-white p-6 rounded-xl shadow-lg">
+          <div>
+            <label className="block text-gray-700 mb-2">Please align your face with the camera</label>
+            <CameraWidget registerFace={registerFace} videoRef={videoRef} />
+          </div>
           <div>
             <label className="block text-gray-700 mb-2">Full Name</label>
             <Field

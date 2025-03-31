@@ -6,10 +6,13 @@ import Dashboard from "./pages/Dashboard";
 import Layout from "./components/Layout";
 import AttendancePage from "./pages/AttendancePage";
 import StudentsPage from "./pages/Students";
+import { ToastContainer } from "react-toastify";
 
 function App() {
   return (
-    <Router>
+    <>
+    <ToastContainer />
+     <Router>
       <Layout>
         <Routes>
           <Route path="/" element={<Dashboard />} />
@@ -20,6 +23,7 @@ function App() {
         </Routes>
       </Layout>
     </Router>
+    </>
   );
 }
 
