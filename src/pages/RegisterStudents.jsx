@@ -33,7 +33,7 @@ const RegisterStudent = () => {
 
     // Save updated student list
     saveToDatabase(databaseKeys.STUDENTS, updatedStudents);
-    console.log('Student Registered:', newStudent);
+    toast.success(`${newStudent?.name} has been registered successfully!`)
     resetForm();
   };
 
