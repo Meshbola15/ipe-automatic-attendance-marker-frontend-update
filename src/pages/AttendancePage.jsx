@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { loadFromDatabase, databaseKeys } from "../utils/database";
 import { exportToCSV } from "../utils/exportCSV";
+// eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
 import { FiCalendar, FiClock, FiUser, FiBook } from "react-icons/fi";
 

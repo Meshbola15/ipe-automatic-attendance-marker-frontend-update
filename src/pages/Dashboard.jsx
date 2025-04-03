@@ -1,5 +1,5 @@
 // src/pages/Dashboard.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import useSound from "use-sound";
 import successSound from "../assets/sound.mp3";
@@ -9,23 +9,47 @@ import {
   databaseKeys,
 } from "../utils/database";
 import CameraWidget from "../components/CameraWidget";
+import { toast } from "react-toastify";
 
 const Dashboard = () => {
   const [play] = useSound(successSound);
   const [recentEntries, setRecentEntries] = useState([]);
   const [isMarked, setIsMarked] = useState(false);
+  const videoRef = useRef(null);
 
-  // Load existing entries on mount
   useEffect(() => {
     const savedEntries = loadFromDatabase(databaseKeys.ATTENDANCE) || [];
-    setRecentEntries(savedEntries.slice(0, 5));
+    if (savedEntries.length > 0) {
+      setRecentEntries(savedEntries[savedEntries.length - 1].attendees || []);
+    }
   }, []);
 
   const handleNewEntry = (newEntry) => {
-    const allEntries = loadFromDatabase(databaseKeys.ATTENDANCE) || [];
-    const updatedEntries = [newEntry, ...allEntries];
-    saveToDatabase(databaseKeys.ATTENDANCE, updatedEntries);
-    setRecentEntries([newEntry, ...allEntries.slice(0, 4)]);
+    let currentAttendance = loadFromDatabase(databaseKeys.ATTENDANCE) || [];
+    let latestAttendance = currentAttendance[currentAttendance.length - 1];
+
+    if (!latestAttendance) {
+      latestAttendance = {
+        date: new Date().toLocaleDateString(),
+        attendees: [],
+      };
+      currentAttendance.push(latestAttendance);
+    }
+
+    const alreadyMarked = latestAttendance.attendees.some(
+      (entry) => entry.id === newEntry.id
+    );
+
+    if (alreadyMarked) {
+      toast.error("Entry already exists");
+      return;
+    }
+
+    latestAttendance.attendees.push(newEntry);
+    saveToDatabase(databaseKeys.ATTENDANCE, currentAttendance);
+
+    setRecentEntries([newEntry, ...recentEntries]);
+    toast.success(`${newEntry.name} has been marked Present!`);
   };
 
   const simulateFaceDetection = () => {
@@ -46,49 +70,50 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-purple-50 p-6 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-8">
-        <CameraWidget />
+    <div className="min-h-screen bg-purple-50 p-6 md:p-8 flex flex-col items-center">
+      {/* Camera Widget */}
+      <div className="w-full max-w-3xl" ref={videoRef}>
+        <CameraWidget videoRef={videoRef} />
+      </div>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="bg-white rounded-2xl shadow-lg p-4 md:p-6"
-        >
-          <h2 className="text-purple-600 text-xl font-bold mb-4">
-            Recent Entries
-          </h2>
-          <div className="space-y-4">
-            {recentEntries.map((entry, index) => (
+      {/* Recent Entries Section */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="w-full max-w-3xl bg-white rounded-2xl shadow-lg p-6 mt-6"
+      >
+        <h2 className="text-purple-600 text-xl font-bold mb-4 text-center">
+          Recent Entries
+        </h2>
+        <div className="space-y-4">
+          {recentEntries.length > 0 ? (
+            recentEntries.map((entry, index) => (
               <motion.div
-                key={entry.id}
+                key={index}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="grid grid-cols-3 md:grid-cols-4 gap-4 items-center bg-purple-50/50 p-3 rounded-lg"
+                className="flex justify-between items-center bg-purple-100 p-3 rounded-lg shadow-sm"
               >
-                <span className="font-medium text-purple-600">
-                  {entry.name}
+                <span className="font-medium text-purple-700">
+                  {entry?.name}
                 </span>
-                <span className="text-gray-600 text-sm">{entry.matricNo}</span>
-                <span className="text-gray-500 text-sm col-span-2 md:col-span-1">
-                  {entry.time}
-                </span>
+                <span className="text-gray-600 text-sm">{entry?.matricNo}</span>
+                <span className="text-gray-500 text-sm">{entry?.time}</span>
               </motion.div>
-            ))}
+            ))
+          ) : (
+            <div className="text-center text-gray-500 py-6">
+              No recent entries detected yet
+            </div>
+          )}
+        </div>
+      </motion.div>
 
-            {recentEntries.length === 0 && (
-              <div className="text-center text-gray-500 py-8">
-                No recent entries detected yet
-              </div>
-            )}
-          </div>
-        </motion.div>
-      </div>
-
+      {/* Simulate Detection Button */}
       <button
         onClick={simulateFaceDetection}
-        className="fixed bottom-4 right-4 bg-purple-600 text-white p-3 rounded-full shadow-lg hover:bg-purple-700 transition-colors"
+        className="fixed bottom-6 right-6 bg-purple-600 text-white p-4 rounded-full shadow-lg hover:bg-purple-700 transition-colors focus:outline-none"
       >
         Simulate Detection
       </button>

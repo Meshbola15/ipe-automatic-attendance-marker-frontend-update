@@ -10,6 +10,7 @@ import {
   FiX,
   FiList,
 } from "react-icons/fi";
+import { RiAdminLine } from "react-icons/ri";
 import backgroundImage from "../assets/ipe-logo.svg";
 
 const Layout = ({ children }) => {
@@ -19,7 +20,7 @@ const Layout = ({ children }) => {
     { to: "/", icon: <FiHome />, text: "Dashboard" },
     { to: "/register", icon: <FiUserPlus />, text: "Register Student" },
     { to: "/login", icon: <FiLogIn />, text: "Student Login" },
-    { to: "/attendance", icon: <FiList />, text: "Attendance Records" },
+    { to: "/admin", icon: <RiAdminLine />, text: "Admin Login" },
     { to: "/students", icon: <FiCameraOff />, text: "Students List" },
   ];
 

@@ -7,22 +7,30 @@ import Layout from "./components/Layout";
 import AttendancePage from "./pages/AttendancePage";
 import StudentsPage from "./pages/Students";
 import { ToastContainer } from "react-toastify";
+import { AdminContextProvider } from "./context/adminContext";
+import AdminPage from "./pages/adminDashboard";
+import AdminLogin from "./pages/adminLogin";
 
 function App() {
   return (
     <>
-    <ToastContainer />
-     <Router>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/register" element={<RegisterStudent />} />
-          <Route path="/login" element={<StudentLogin />} />
-          <Route path="/attendance" element={<AttendancePage />} />
-          <Route path="/students" element={<StudentsPage />} />
-        </Routes>
-      </Layout>
-    </Router>
+      <ToastContainer />
+      <AdminContextProvider>
+        <Router>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/register" element={<RegisterStudent />} />
+              <Route path="/login" element={<StudentLogin />} />
+              <Route path="/attendance" element={<AttendancePage />} />
+              <Route path="/students" element={<StudentsPage />} />
+              <Route path="*" element={<h1>404 Not Found</h1>} />
+              <Route path="/admin" element={<AdminLogin />} />
+              <Route path="/admin/dashboard" element={<AdminPage />} />
+            </Routes>
+          </Layout>
+        </Router>
+      </AdminContextProvider>
     </>
   );
 }
