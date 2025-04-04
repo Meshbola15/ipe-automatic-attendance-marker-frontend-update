@@ -6,7 +6,7 @@ import FaceRecognition from "./Software";
 import { useAdminContext } from "../context/adminContext";
 
 const CameraWidget = ({ registerFace, videoRef, recognizeFace }) => {
-  const [isCameraOn, setIsCameraOn] = useState(true);
+  const [isCameraOn, setIsCameraOn] = useState(false);
   const { isCameraActive } = useAdminContext();
 
   return (

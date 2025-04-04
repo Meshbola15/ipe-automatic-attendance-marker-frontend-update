@@ -78,66 +78,79 @@ const Dashboard = () => {
       console.log("Video not ready");
       return;
     }
-
+  
     const students = localStorage.getItem("students");
     if (!students) {
       alert("No registered face found.");
       return;
     }
-
+  
     const parsedStudents = JSON.parse(students);
     if (parsedStudents.length === 0) {
       alert("No registered face found.");
       return;
     }
-
+  
     const options = new faceapi.TinyFaceDetectorOptions({
       inputSize: 512,
       scoreThreshold: 0.4,
     });
-
+  
+    // **Detect Multiple Faces**
     const detections = await faceapi
-      .detectSingleFace(videoRef.current, options)
+      .detectAllFaces(videoRef.current, options)
       .withFaceLandmarks()
-      .withFaceDescriptor();
-
-    if (!detections) {
+      .withFaceDescriptors(); // This will detect multiple faces
+  
+    if (!detections || detections.length === 0) {
       console.log("No face detected.");
-      toast.error('No face detected')
-      // recognizeFace()
+      toast.error("No face detected");
       return;
     }
-
-    for (const descriptor of parsedStudents) {
-      const storedArray = new Float32Array(Object.values(descriptor.faceData));
-      console.log("Stored descriptor:", storedArray);
-
-      const labeledDescriptor = new faceapi.LabeledFaceDescriptors(descriptor?.name, [storedArray]);
-      const faceMatcher = new faceapi.FaceMatcher([labeledDescriptor], 0.6);
-      const bestMatch = faceMatcher.findBestMatch(detections.descriptor);
-
+  
+    console.log(`Detected ${detections.length} faces`);
+  
+    // Convert stored students' face data into LabeledFaceDescriptors
+    const labeledDescriptors = parsedStudents.map((student) => {
+      const storedArray = new Float32Array(Object.values(student.faceData));
+      return new faceapi.LabeledFaceDescriptors(student.name, [storedArray]);
+    });
+  
+    const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
+  
+    detections.forEach((detection) => {
+      const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
+  
       if (bestMatch.label !== "unknown") {
-        const newEntry = {
-          id: Date.now(),
-          name: descriptor?.name,
-          matricNo: descriptor?.matricNo,
-          time: new Date().toLocaleTimeString(),
-          date: new Date().toLocaleDateString(),
-          status: "Present",
-        };
-        handleNewEntry(newEntry);
-        return;
+        const matchedStudent = parsedStudents.find(
+          (student) => student.name === bestMatch.label
+        );
+  
+        if (matchedStudent) {
+          const newEntry = {
+            id: Date.now(),
+            name: matchedStudent.name,
+            matricNo: matchedStudent.matricNo,
+            time: new Date().toLocaleTimeString(),
+            date: new Date().toLocaleDateString(),
+            status: "Present",
+          };
+  
+          handleNewEntry(newEntry);
+        }
+      } else {
+        console.log("Face detected but no match found.");
       }
-    }
-
-    console.log("No match found.");
+    });
   };
+  
 
   const [activeDetection, setActiveDetection] = useState(false);
   const intervalRef = useRef(null);
   
   const handleDetection = () => {
     if (!activeDetection) {
+      recognizeFace()
       intervalRef.current = setInterval(() => {
         recognizeFace();
       }, 10000);

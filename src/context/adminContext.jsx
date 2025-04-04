@@ -5,7 +5,7 @@ import { toast } from "react-toastify";
 export const AdminContext = React.createContext();
 
 const AdminContextProvider = ({ children }) => {
-  const [isCameraActive, setIsCameraActive] = useState(true);
+  const [isCameraActive, setIsCameraActive] = useState(false);
   const [currentFileName, setCurrentFileName] = useState("");
   const [cameraTimeString, setCameraTimeString] = useState("02:00:00");
   const [hasNotified, setHasNotified] = useState(false); // Prevent multiple toasts
