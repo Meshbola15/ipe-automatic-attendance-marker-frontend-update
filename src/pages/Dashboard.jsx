@@ -10,12 +10,16 @@ import {
 } from "../utils/database";
 import CameraWidget from "../components/CameraWidget";
 import { toast } from "react-toastify";
+import { FaUser } from "react-icons/fa6";
+import * as faceapi from "face-api.js";
 
 const Dashboard = () => {
   const [play] = useSound(successSound);
   const [recentEntries, setRecentEntries] = useState([]);
   const [isMarked, setIsMarked] = useState(false);
   const videoRef = useRef(null);
+  const [attendanceLists, setAttendanceLists] = useState([])
+  const [selectedList, setSelectedList] = useState(null)
 
   useEffect(() => {
     const savedEntries = loadFromDatabase(databaseKeys.ATTENDANCE) || [];
@@ -26,18 +30,20 @@ const Dashboard = () => {
 
   const handleNewEntry = (newEntry) => {
     let currentAttendance = loadFromDatabase(databaseKeys.ATTENDANCE) || [];
-    let latestAttendance = currentAttendance[currentAttendance.length - 1];
+    let latestAttendance = selectedList;
 
     if (!latestAttendance) {
       latestAttendance = {
+        id: Date.now(), // Ensure it has an ID
         date: new Date().toLocaleDateString(),
         attendees: [],
       };
       currentAttendance.push(latestAttendance);
     }
 
+    // Check if entry already exists
     const alreadyMarked = latestAttendance.attendees.some(
-      (entry) => entry.id === newEntry.id
+      (entry) => entry.matricNo === newEntry.matricNo
     );
 
     if (alreadyMarked) {
@@ -45,78 +51,199 @@ const Dashboard = () => {
       return;
     }
 
+    // Add new attendee
     latestAttendance.attendees.push(newEntry);
-    saveToDatabase(databaseKeys.ATTENDANCE, currentAttendance);
 
+    // Update attendance list properly
+    const updatedAttendance = currentAttendance.map((attendance) =>
+      attendance.id === latestAttendance.id ? latestAttendance : attendance
+    );
+
+    console.log(updatedAttendance);
+    saveToDatabase(databaseKeys.ATTENDANCE, updatedAttendance);
+
+    // Update recent entries
     setRecentEntries([newEntry, ...recentEntries]);
     toast.success(`${newEntry.name} has been marked Present!`);
   };
 
-  const simulateFaceDetection = () => {
-    if (!isMarked) {
-      const newEntry = {
-        id: Date.now(),
-        name: "John Doe",
-        matricNo: "STD001",
-        time: new Date().toLocaleTimeString(),
-        date: new Date().toLocaleDateString(),
-        status: "Present",
-      };
-      handleNewEntry(newEntry);
-      play();
-      setIsMarked(true);
-      setTimeout(() => setIsMarked(false), 2000);
+  useEffect(() => {
+    const attendance = loadFromDatabase(databaseKeys.ATTENDANCE) || [];
+    console.log(attendance)
+    setAttendanceLists(attendance)
+  }, [])
+
+  const recognizeFace = async () => {
+    if (!videoRef.current || videoRef.current.readyState !== 4) {
+      console.log("Video not ready");
+      return;
+    }
+
+    const students = localStorage.getItem("students");
+    if (!students) {
+      alert("No registered face found.");
+      return;
+    }
+
+    const parsedStudents = JSON.parse(students);
+    if (parsedStudents.length === 0) {
+      alert("No registered face found.");
+      return;
+    }
+
+    const options = new faceapi.TinyFaceDetectorOptions({
+      inputSize: 512,
+      scoreThreshold: 0.4,
+    });
+
+    const detections = await faceapi
+      .detectSingleFace(videoRef.current, options)
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+
+    if (!detections) {
+      console.log("No face detected.");
+      toast.error('No face detected')
+      // recognizeFace()
+      return;
+    }
+
+    for (const descriptor of parsedStudents) {
+      const storedArray = new Float32Array(Object.values(descriptor.faceData));
+      console.log("Stored descriptor:", storedArray);
+
+      const labeledDescriptor = new faceapi.LabeledFaceDescriptors(descriptor?.name, [storedArray]);
+      const faceMatcher = new faceapi.FaceMatcher([labeledDescriptor], 0.6);
+      const bestMatch = faceMatcher.findBestMatch(detections.descriptor);
+
+      if (bestMatch.label !== "unknown") {
+        const newEntry = {
+          id: Date.now(),
+          name: descriptor?.name,
+          matricNo: descriptor?.matricNo,
+          time: new Date().toLocaleTimeString(),
+          date: new Date().toLocaleDateString(),
+          status: "Present",
+        };
+        handleNewEntry(newEntry);
+        return;
+      }
+    }
+
+    console.log("No match found.");
+  };
+
+  const [activeDetection, setActiveDetection] = useState(false);
+  const intervalRef = useRef(null);
+  
+  const handleDetection = () => {
+    if (!activeDetection) {
+      intervalRef.current = setInterval(() => {
+        recognizeFace();
+      }, 10000);
+      setActiveDetection(true);
+    } else {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null; // Reset ref after clearing interval
+      setActiveDetection(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-purple-50 p-6 md:p-8 flex flex-col items-center">
-      {/* Camera Widget */}
-      <div className="w-full max-w-3xl" ref={videoRef}>
-        <CameraWidget videoRef={videoRef} />
-      </div>
+    <div className="w-full">
+      {
+        selectedList ? <div className="min-h-screen bg-purple-50 p-6 md:p-8 flex flex-col items-center">
+          {/* Camera Widget */}
+          <div className="w-full max-w-3xl" ref={videoRef}>
+            <CameraWidget recognizeFace={recognizeFace} videoRef={videoRef} />
+          </div>
 
-      {/* Recent Entries Section */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="w-full max-w-3xl bg-white rounded-2xl shadow-lg p-6 mt-6"
-      >
-        <h2 className="text-purple-600 text-xl font-bold mb-4 text-center">
-          Recent Entries
-        </h2>
-        <div className="space-y-4">
-          {recentEntries.length > 0 ? (
-            recentEntries.map((entry, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="flex justify-between items-center bg-purple-100 p-3 rounded-lg shadow-sm"
-              >
-                <span className="font-medium text-purple-700">
-                  {entry?.name}
-                </span>
-                <span className="text-gray-600 text-sm">{entry?.matricNo}</span>
-                <span className="text-gray-500 text-sm">{entry?.time}</span>
-              </motion.div>
-            ))
-          ) : (
-            <div className="text-center text-gray-500 py-6">
-              No recent entries detected yet
+          {/* Recent Entries Section */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="w-full max-w-3xl bg-white rounded-2xl shadow-lg p-6 mt-6"
+          >
+            <h2 className="text-purple-600 text-xl font-bold mb-4 text-center">
+              Recent Entries ({selectedList?.fileName})
+            </h2>
+            <div className="space-y-4">
+              {selectedList?.attendees?.length > 0 ? (
+                selectedList?.attendees?.map((entry, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="flex justify-between items-center bg-purple-100 p-3 rounded-lg shadow-sm"
+                  >
+                    <span className="font-medium text-purple-700">
+                      {entry?.name}
+                    </span>
+                    <span className="text-gray-600 text-sm">{entry?.matricNo}</span>
+                    <span className="text-gray-500 text-sm">{entry?.time}</span>
+                  </motion.div>
+                ))
+              ) : (
+                <div className="text-center text-gray-500 py-6">
+                  No recent entries detected yet
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </motion.div>
+          </motion.div>
 
-      {/* Simulate Detection Button */}
-      <button
-        onClick={simulateFaceDetection}
-        className="fixed bottom-6 right-6 bg-purple-600 text-white p-4 rounded-full shadow-lg hover:bg-purple-700 transition-colors focus:outline-none"
-      >
-        Simulate Detection
-      </button>
+          {/* Simulate Detection Button */}
+
+          <div className="flex flex-col flex-grow justify-center mt-[4rem] items-center gap-4">
+            <h3 className="text-lg font-semibold">Select Attendance List</h3>
+            <div className="p-2 border-2 flex flex-col gap-4 rounded-md border-purple-600">
+              {
+                attendanceLists.map((list, index) => (
+                  <div onClick={() => {
+                    setSelectedList(list)
+                    // scroller.scrollTo('dashboard', {
+                    //   smooth: true,
+                    //   offset: -100
+                    // })
+                  }} key={index} className="w-full p-4 bg-gray-100 rounded-md cursor-pointer flex gap-8 font-medium justify-between">
+                    <p>{list?.fileName}</p>
+                    <p className="flex items-center gap-2">{list?.attendees?.length} <FaUser className="text-purple-600" /></p>
+                  </div>
+                ))
+              }
+            </div>
+          </div>
+          <button
+            onClick={handleDetection}
+            className="fixed bottom-6 right-6 bg-purple-600 text-white p-4 rounded-full shadow-lg hover:bg-purple-700 transition-colors focus:outline-none"
+          >
+            {
+              activeDetection? 'End Detection': 'Begin Detection'
+            }
+          </button>
+        </div> : <div className="flex flex-col flex-grow justify-center items-center gap-4">
+          <h3 className="text-lg font-semibold">Select Attendance List</h3>
+          {
+            !attendanceLists || attendanceLists?.length === 0 ? <div>Login as admin to create a list</div> :
+              <div className="p-2 border-2 flex flex-col gap-4 rounded-md border-purple-600">
+                {
+                  attendanceLists.map((list, index) => (
+                    <div onClick={() => {
+                      setSelectedList(list)
+                      // scroller.scrollTo('dashboard', {
+                      //   smooth: true,
+                      //   offset: -100
+                      // })
+                    }} key={index} className="w-full p-4 bg-gray-100 rounded-md cursor-pointer flex gap-8 font-medium justify-between">
+                      <p>{list?.fileName}</p>
+                      <p className="flex items-center gap-2">{list?.attendees?.length} <FaUser className="text-purple-600" /></p>
+                    </div>
+                  ))
+                }
+              </div>
+          }
+        </div>
+      }
     </div>
   );
 };

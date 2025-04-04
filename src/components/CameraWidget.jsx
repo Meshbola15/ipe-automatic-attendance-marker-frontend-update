@@ -5,7 +5,7 @@ import { FiCameraOff, FiCamera } from "react-icons/fi";
 import FaceRecognition from "./Software";
 import { useAdminContext } from "../context/adminContext";
 
-const CameraWidget = ({ registerFace, videoRef }) => {
+const CameraWidget = ({ registerFace, videoRef, recognizeFace }) => {
   const [isCameraOn, setIsCameraOn] = useState(true);
   const { isCameraActive } = useAdminContext();
 
@@ -33,6 +33,7 @@ const CameraWidget = ({ registerFace, videoRef }) => {
             <div className="relative aspect-video bg-gray-100 rounded-xl overflow-hidden">
               <FaceRecognition
                 registerFace={registerFace}
+                recognizeFace={recognizeFace}
                 videoRef={videoRef}
               />
             </div>

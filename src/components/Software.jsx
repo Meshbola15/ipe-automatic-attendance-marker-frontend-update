@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as faceapi from "face-api.js";
 
-const FaceRecognition = ({ videoRef, registerFace }) => {
+const FaceRecognition = ({ videoRef, registerFace, recognizeFace }) => {
   const canvasRef = useRef(null);
   const [status, setStatus] = useState("Waiting...");
 
@@ -29,39 +29,6 @@ const FaceRecognition = ({ videoRef, registerFace }) => {
 
     loadModels();
   }, []);
-
-
-
-  const recognizeFace = async () => {
-    if (!videoRef.current) return;
-
-    const storedDescriptor = localStorage.getItem("registeredFace");
-    if (!storedDescriptor) {
-      alert("No registered face found.");
-      return;
-    }
-
-    // Parse the stored descriptor back into a Float32Array
-    const storedArray = new Float32Array(JSON.parse(storedDescriptor));
-
-    // Create LabeledFaceDescriptors with the stored descriptor
-    const labeledDescriptor = new faceapi.LabeledFaceDescriptors("User", [storedArray]);
-
-    const faceMatcher = new faceapi.FaceMatcher([labeledDescriptor], 0.6);
-
-    const detections = await faceapi.detectSingleFace(videoRef.current,
-      new faceapi.TinyFaceDetectorOptions()
-    ).withFaceLandmarks().withFaceDescriptor();
-
-    if (!detections) {
-      setStatus("No face detected.");
-      return;
-    }
-
-    // Compare the live descriptor with the stored one
-    const bestMatch = faceMatcher.findBestMatch(detections.descriptor);
-    setStatus(bestMatch.toString());
-  };
 
   return (
     <div>

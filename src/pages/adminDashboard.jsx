@@ -115,7 +115,7 @@ const AdminPage = () => {
     e.preventDefault();
 
     const newAttendanceConfig = {
-      fileName: `${currentFileName}-${Date.now()}-${selectedCourse}`,
+      fileName: `${currentFileName}-${new Date().toLocaleDateString()}-${selectedCourse}`,
       course: selectedCourse,
       date: new Date().toLocaleDateString(),
       time: new Date().toLocaleTimeString(),
@@ -201,9 +201,8 @@ const AdminPage = () => {
           <TimeInput />
           <p className="text-black">Time Remaining: {timeRemaining}</p>
           <button
-            className={`px-4 py-2 text-white rounded-md w-full ${
-              isCameraActive ? "bg-red-400" : "bg-green-600"
-            }`}
+            className={`px-4 py-2 text-white rounded-md w-full ${isCameraActive ? "bg-red-400" : "bg-green-600"
+              }`}
             onClick={handleCameraToggle}
           >
             {isCameraActive ? "Turn Off Camera" : "Turn On Camera"}
@@ -237,12 +236,20 @@ const AdminPage = () => {
                 className="flex justify-between items-center p-2 bg-white rounded-md text-black"
               >
                 <span>{course}</span>
-                <button
-                  className="text-red-500"
-                  onClick={() => handleRemoveCourse(course)}
-                >
-                  Remove
-                </button>
+                <span className="flex items-center gap-4">
+                  {/* <button
+                    className="text-purple-500"
+                    onClick={() => handleRemoveCourse(course)}
+                  >
+                    Create Attendance
+                  </button> */}
+                  <button
+                    className="text-red-500"
+                    onClick={() => handleRemoveCourse(course)}
+                  >
+                    Remove
+                  </button>
+                </span>
               </li>
             ))}
           </ul>
@@ -312,7 +319,7 @@ const AdminPage = () => {
                   {openAttendance[attendance.fileName] && (
                     <div className="mt-4">
                       {attendance.attendees &&
-                      attendance.attendees.length > 0 ? (
+                        attendance.attendees.length > 0 ? (
                         <table className="min-w-full">
                           <thead>
                             <tr className="text-left">
