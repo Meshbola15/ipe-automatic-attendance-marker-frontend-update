@@ -16,7 +16,7 @@ const StudentsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-purple-50 p-4 md:p-8">
+    <div className="min-h-screen bg-purple-50 mt-8 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         <h2 className="text-purple-600 text-2xl font-bold mb-6">
           Registered Students

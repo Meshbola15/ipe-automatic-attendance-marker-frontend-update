@@ -214,7 +214,7 @@ const AdminPage = () => {
   }
 
   return (
-    <div className=" min-h-screen p-4 py-6 md:p-8 text-white space-y-6 w-full m-0">
+    <div className=" min-h-screen p-4 py-6 mt-6 md:p-8 text-white space-y-6 w-full m-0">
       {loading && <LoadingScreen />}
       <section className="grid grid-cols-1  lg:grid-cols-3 gap-6 w-full">
         <div className="bg-white rounded-2xl col-span-1 shadow-lg p-4 md:p-6 w-full flex flex-col items-center justify-center gap-4">

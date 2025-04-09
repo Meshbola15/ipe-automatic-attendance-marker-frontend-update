@@ -52,7 +52,7 @@ const AdminSignUp = () => {
   };
 
   return (
-    <div className="h-full w-full flex items-center justify-center">
+    <div className="h-full w-full flex items-center justify-center mt-8">
       <form
         onSubmit={handleSignUp}
         className="max-w-md w-full bg-white p-8 rounded shadow"

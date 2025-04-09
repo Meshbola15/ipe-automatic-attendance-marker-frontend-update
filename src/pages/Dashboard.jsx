@@ -23,7 +23,7 @@ const Dashboard = () => {
   }, []);
 
   return (
-    <div className="w-full">
+    <div className="w-full mt-8">
       {selectedList ? (
         <div className="min-h-screen bg-purple-50 p-4 py-8 md:p-8 flex flex-col items-center">
           {/* Recent Entries Section */}
