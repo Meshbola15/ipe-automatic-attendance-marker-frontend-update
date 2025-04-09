@@ -216,8 +216,8 @@ const AdminPage = () => {
   return (
     <div className=" min-h-screen p-4 py-6 md:p-8 text-white space-y-6 w-full m-0">
       {loading && <LoadingScreen />}
-      <section className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-3 gap-6 w-full">
-        <div className="bg-white rounded-2xl shadow-lg p-4 md:p-6 w-full flex flex-col items-center justify-center gap-4">
+      <section className="grid grid-cols-1  lg:grid-cols-3 gap-6 w-full">
+        <div className="bg-white rounded-2xl col-span-1 shadow-lg p-4 md:p-6 w-full flex flex-col items-center justify-center gap-4">
           <h2 className="text-lg font-bold text-black">Camera Control</h2>
           <p className="text-black">Camera Time (in minutes):</p>
           <TimeInput />
@@ -242,7 +242,7 @@ const AdminPage = () => {
         </div>
 
         {/* department Management Section */}
-        <div className="col-span-2 bg-white rounded-2xl shadow-lg p-4 md:p-6 w-full">
+        <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl shadow-lg p-4 md:p-6 w-full">
           <h2 className="text-lg font-bold text-black mb-4">
             Department Management
           </h2>
