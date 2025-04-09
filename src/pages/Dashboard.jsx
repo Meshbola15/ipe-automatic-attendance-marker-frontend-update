@@ -25,7 +25,7 @@ const Dashboard = () => {
   return (
     <div className="w-full">
       {selectedList ? (
-        <div className="min-h-screen bg-purple-50 p-6 md:p-8 flex flex-col items-center">
+        <div className="min-h-screen bg-purple-50 p-4 py-8 md:p-8 flex flex-col items-center">
           {/* Recent Entries Section */}
           <motion.div
             initial={{ opacity: 0 }}

@@ -162,7 +162,7 @@ const CameraPage = () => {
   return (
     <div className="w-full">
       {selectedList ? (
-        <div className="min-h-screen bg-purple-50 p-6 md:p-8 flex flex-col items-center">
+        <div className="min-h-screen bg-purple-50 p-4 py-6 md:p-8 flex flex-col items-center">
           {/* Camera Widget */}
           <div className="w-full max-w-3xl" ref={videoRef}>
             <CameraWidget recognizeFace={recognizeFace} videoRef={videoRef} />
