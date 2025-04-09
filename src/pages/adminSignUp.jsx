@@ -1,69 +1,65 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { useAdminContext } from "../context/adminContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
   databaseKeys,
-  deleteFromDatabase,
   loadFromDatabase,
+  saveToDatabase,
 } from "../utils/database";
-import { useAdminContext } from "../context/adminContext";
-import LoadingScreen from "../components/loadingScreen";
-import { comparePassword } from "../utils/brcrypt";
-const AdminLogin = () => {
+import { v4 as uuidv4 } from "uuid";
+import { hashPassword } from "../utils/brcrypt";
+
+const AdminSignUp = () => {
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { setAdminDetails } = useAdminContext();
 
-  const handleLogin = async (e) => {
+  const handleSignUp = async (e) => {
     e.preventDefault();
-    setLoading(true);
 
     try {
-      const rawAdmins = await loadFromDatabase(databaseKeys.ADMIN);
-      const admins = Object.values(rawAdmins);
-      console.log(admins)
+      const existingAdmins = await loadFromDatabase(databaseKeys.ADMIN);
+      const admins = Array.isArray(existingAdmins) ? existingAdmins : [];
 
-      const user = await Promise.all(
-        admins.map(async (admin) => {
-          const isMatch = await comparePassword(password, admin.password);
-          return isMatch && admin.username === username ? admin : null;
-        })
-      );
+      const userExists = admins.some((admin) => admin.username === username);
 
-      const validUser = user.find((u) => u !== null);
-
-      if (validUser) {
-        setPassword("");
-        setUsername("");
-        localStorage.setItem("admin", JSON.stringify(validUser));
-        setAdminDetails(validUser);
-        navigate(`/admin/dashboard/${validUser.id}`);
-        toast.success("Login successful!");
-      } else {
-        toast.error("Invalid username or password");
+      if (userExists) {
+        toast.error("User already exists");
+        return;
       }
+
+      const newAdmin = {
+        id: uuidv4(),
+        username,
+        password: await hashPassword(password),
+      };
+
+      admins.push(newAdmin);
+      await saveToDatabase(databaseKeys.ADMIN, newAdmin); // Handles push internally
+      setAdminDetails(newAdmin);
+      console.log("New admin:", newAdmin);
+      toast.success("User created successfully");
+
+      navigate(`/admin/dashboard/${newAdmin.id}`);
+      setPassword("");
+      setUsername("");
     } catch (error) {
-      console.error("Login error:", error);
+      console.error("Sign-up error:", error);
       toast.error("Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
     }
   };
 
-
   return (
     <div className="h-full w-full flex items-center justify-center">
-      {loading && <LoadingScreen />}
       <form
-        onSubmit={handleLogin}
+        onSubmit={handleSignUp}
         className="max-w-md w-full bg-white p-8 rounded shadow"
       >
         <h1 className="text-2xl font-bold text-purple-600 mb-6 text-center">
-          Admin Login
+          Admin Sign Up
         </h1>
-
         <div className="mb-4">
           <label className="block mb-2 text-sm font-medium text-gray-900">
             Username
@@ -77,7 +73,6 @@ const AdminLogin = () => {
             className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block w-full p-2.5"
           />
         </div>
-
         <div className="mb-6">
           <label className="block mb-2 text-sm font-medium text-gray-900">
             Password
@@ -91,16 +86,15 @@ const AdminLogin = () => {
             className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block w-full p-2.5"
           />
         </div>
-
         <button
           type="submit"
           className="text-white bg-purple-600 hover:bg-purple-700 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-lg text-sm w-full px-5 py-2.5 text-center"
         >
-          Login
+          Sign Up
         </button>
       </form>
     </div>
   );
 };
 
-export default AdminLogin;
+export default AdminSignUp;

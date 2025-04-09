@@ -1,8 +1,9 @@
 // src/pages/Dashboard.jsx
 import { useState, useEffect, useRef } from "react";
+// eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
-import useSound from "use-sound";
-import successSound from "../assets/sound.mp3";
+// import useSound from "use-sound";
+// import successSound from "../assets/sound.mp3";
 import {
   saveToDatabase,
   loadFromDatabase,
@@ -14,7 +15,7 @@ import { FaUser } from "react-icons/fa6";
 import * as faceapi from "face-api.js";
 
 const Dashboard = () => {
-  const [play] = useSound(successSound);
+  // const [play] = useSound(successSound);
   const videoRef = useRef(null);
   const [attendanceLists, setAttendanceLists] = useState([])
   const [selectedList, setSelectedList] = useState(null)
@@ -157,7 +158,7 @@ const Dashboard = () => {
         selectedList ? <div className="min-h-screen bg-purple-50 p-6 md:p-8 flex flex-col items-center">
           {/* Camera Widget */}
           <div className="w-full max-w-3xl" ref={videoRef}>
-            <CameraWidget recognizeFace={recognizeFace} videoRef={videoRef} />
+            {/* <CameraWidget recognizeFace={recognizeFace} videoRef={videoRef} /> */}
           </div>
 
           {/* Recent Entries Section */}

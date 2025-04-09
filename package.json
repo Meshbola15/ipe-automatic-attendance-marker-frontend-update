@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.0.17",
+    "bcryptjs": "^3.0.2",
+    "crypto-js": "^4.2.0",
     "face-api.js": "^0.22.2",
     "firebase": "^11.6.0",
     "formik": "^2.4.6",
@@ -26,6 +28,7 @@
     "uid": "^2.0.2",
     "use-sound": "^5.0.0",
     "uuid": "^11.1.0",
+    "uuidv4": "^6.2.13",
     "yup": "^1.6.1"
   },
   "devDependencies": {

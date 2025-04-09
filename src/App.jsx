@@ -10,6 +10,8 @@ import { ToastContainer } from "react-toastify";
 import { AdminContextProvider } from "./context/adminContext";
 import AdminPage from "./pages/adminDashboard";
 import AdminLogin from "./pages/adminLogin";
+import CameraPage from "./pages/camera";
+import AdminSignUp from "./pages/adminSignUp";
 
 function App() {
   return (
@@ -25,8 +27,10 @@ function App() {
               <Route path="/attendance" element={<AttendancePage />} />
               <Route path="/students" element={<StudentsPage />} />
               <Route path="*" element={<h1>404 Not Found</h1>} />
+              <Route path="/admin-sign-up" element={<AdminSignUp />} />
               <Route path="/admin" element={<AdminLogin />} />
-              <Route path="/admin/dashboard" element={<AdminPage />} />
+              <Route path="/admin/dashboard/:id" element={<AdminPage />} />
+              <Route path="/admin/camera/:id" element={<CameraPage />} />
             </Routes>
           </Layout>
         </Router>
