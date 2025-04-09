@@ -30,7 +30,7 @@ const CameraWidget = ({ registerFace, videoRef, recognizeFace }) => {
           </div>
 
           {isCameraOn ? (
-            <div className="relative aspect-video bg-gray-100 rounded-xl overflow-hidden">
+            <div className="relative aspect-video bg-gray-100 rounded-xl w-full">
               <FaceRecognition
                 registerFace={registerFace}
                 recognizeFace={recognizeFace}

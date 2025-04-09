@@ -24,15 +24,25 @@ const Dashboard = () => {
 
   return (
     <div className="w-full">
+<<<<<<< HEAD
       {selectedList ? (
         <div className="min-h-screen bg-purple-50 p-6 md:p-8 flex flex-col items-center">
+=======
+      {
+        selectedList ? <div className="min-h-screen bg-purple-50 mt-10 flex flex-col items-center">
+          {/* Camera Widget */}
+          <div className="w-full max-w-3xl" ref={videoRef}>
+            <CameraWidget recognizeFace={recognizeFace} videoRef={videoRef} />
+          </div>
+
+>>>>>>> 4decf7b6228fe619c2cf0b67d37ec255d83beeb5
           {/* Recent Entries Section */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="w-full max-w-3xl bg-white rounded-2xl shadow-lg p-6 mt-6"
           >
-            <h2 className="text-purple-600 text-xl font-bold mb-4 text-center">
+            <h2 className="text-purple-600 md:text-xl font-bold mb-4 text-center">
               Recent Entries ({selectedList?.fileName})
             </h2>
             <div className="space-y-4">
@@ -43,15 +53,22 @@ const Dashboard = () => {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="flex justify-between items-center bg-purple-100 p-3 rounded-lg shadow-sm"
+                    className="flex flex-col md:flex-row gap-2 justify-between items-center bg-purple-100 p-3 rounded-lg shadow-sm"
                   >
                     <span className="font-medium text-purple-700">
                       {entry?.name}
                     </span>
+<<<<<<< HEAD
                     <span className="text-gray-600 text-sm">
                       {entry?.matricNo}
                     </span>
                     <span className="text-gray-500 text-sm">{entry?.time}</span>
+=======
+                    <span className="w-full flex justify-between">
+                      <span className="text-gray-600 text-sm">{entry?.matricNo}</span>
+                      <span className="text-gray-500 text-sm">{entry?.time}</span>
+                    </span>
+>>>>>>> 4decf7b6228fe619c2cf0b67d37ec255d83beeb5
                   </motion.div>
                 ))
               ) : (
