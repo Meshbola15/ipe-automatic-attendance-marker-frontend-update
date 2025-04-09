@@ -71,7 +71,7 @@ const Layout = ({ children }) => {
         />
 
         {/* Content Layer */}
-        <div className="relative z-10 p-6">{children}</div>
+        <div className="relative z-10 p-4">{children}</div>
       </main>
     </div>
   );

@@ -31,12 +31,8 @@ const FaceRecognition = ({ videoRef, registerFace, recognizeFace }) => {
   }, []);
 
   return (
-    <div>
-      <video ref={videoRef} width="640" height="480" autoPlay></video>
-      <canvas ref={canvasRef} />
-      <p>Status: {status}</p>
-      <button onClick={registerFace}>Register Face</button>
-      <button onClick={recognizeFace}>Recognize Face</button>
+    <div className="w-full">
+      <video ref={videoRef} className="w-full h-[20rem] md:h-auto inset-0 object-cover" autoPlay></video>
     </div>
   );
 };

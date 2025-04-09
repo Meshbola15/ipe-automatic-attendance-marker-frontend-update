@@ -37,7 +37,7 @@ const AttendancePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-purple-50 p-6 md:p-8">
+    <div className="min-h-screen bg-purple-50">
       <div className="max-w-6xl mx-auto">
         <motion.div
           initial={{ opacity: 0 }}

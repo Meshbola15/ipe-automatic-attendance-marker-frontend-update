@@ -22,7 +22,7 @@ const StudentLogin = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6 min-h-screen">
+    <div className="max-w-2xl mx-auto min-h-screen">
       <h1 className="text-2xl font-bold text-purple-600 mb-6">
         Student Attendance Portal
       </h1>
