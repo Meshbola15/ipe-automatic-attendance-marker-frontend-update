@@ -17,18 +17,18 @@ import * as faceapi from "face-api.js";
 const Dashboard = () => {
   // const [play] = useSound(successSound);
   const videoRef = useRef(null);
-  const [attendanceLists, setAttendanceLists] = useState([])
-  const [selectedList, setSelectedList] = useState(null)
-
+  const [attendanceLists, setAttendanceLists] = useState([]);
+  const [selectedList, setSelectedList] = useState(null);
 
   const handleNewEntry = (newEntry) => {
     let latestAttendance = selectedList;
 
     // Check if entry already exists
-    console.log(selectedList?.attendees)
-    const alreadyMarked = selectedList?.attendees?.some(
-      (entry) => entry.matricNo === newEntry.matricNo
-    ) || false;
+    console.log(selectedList?.attendees);
+    const alreadyMarked =
+      selectedList?.attendees?.some(
+        (entry) => entry.matricNo === newEntry.matricNo
+      ) || false;
 
     if (alreadyMarked) {
       toast.error("Entry already exists");
@@ -36,25 +36,30 @@ const Dashboard = () => {
     }
 
     // Add new attendee
-    const attendees = latestAttendance?.attendees || []
-    latestAttendance = { ...latestAttendance, attendees: [...attendees, newEntry] };
+    const attendees = latestAttendance?.attendees || [];
+    latestAttendance = {
+      ...latestAttendance,
+      attendees: [...attendees, newEntry],
+    };
 
     // Update attendance list properly
 
     // Update selectedList with new entry (only if not already present)
-    setSelectedList(prev => {
+    setSelectedList(async (prev) => {
       const attendees = prev?.attendees || [];
-      const alreadyExists = attendees.some(entry => entry.matricNo === newEntry.matricNo);
+      const alreadyExists = attendees.some(
+        (entry) => entry.matricNo === newEntry.matricNo
+      );
 
       if (alreadyExists) return prev;
 
       const updatedList = {
         ...prev,
-        attendees: [...attendees, newEntry]
+        attendees: [...attendees, newEntry],
       };
 
       // Save updated list to database
-      saveToDatabase(databaseKeys.ATTENDANCE, updatedList);
+      await saveToDatabase(databaseKeys.ATTENDANCE, updatedList);
 
       return updatedList;
     });
@@ -64,10 +69,14 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    loadFromDatabase(databaseKeys.ATTENDANCE).then(data => {
-      setAttendanceLists(data)
-    })
-  }, [])
+    const getAttendanceLists = async () => {
+      await loadFromDatabase(databaseKeys.ATTENDANCE).then((data) => {
+        setAttendanceLists(data);
+      });
+    };
+
+    getAttendanceLists();
+  }, []);
 
   const recognizeFace = async () => {
     if (!videoRef.current || videoRef.current.readyState !== 4) {
@@ -75,7 +84,7 @@ const Dashboard = () => {
       return;
     }
 
-    const students = await loadFromDatabase(databaseKeys.STUDENTS) || [];
+    const students = (await loadFromDatabase(databaseKeys.STUDENTS)) || [];
     if (!students || !students?.length) {
       alert("No registered face found.");
       return;
@@ -134,13 +143,12 @@ const Dashboard = () => {
     });
   };
 
-
   const [activeDetection, setActiveDetection] = useState(false);
   const intervalRef = useRef(null);
 
   const handleDetection = () => {
     if (!activeDetection) {
-      recognizeFace()
+      recognizeFace();
       intervalRef.current = setInterval(() => {
         recognizeFace();
       }, 10000);
@@ -154,8 +162,8 @@ const Dashboard = () => {
 
   return (
     <div className="w-full">
-      {
-        selectedList ? <div className="min-h-screen bg-purple-50 p-6 md:p-8 flex flex-col items-center">
+      {selectedList ? (
+        <div className="min-h-screen bg-purple-50 p-6 md:p-8 flex flex-col items-center">
           {/* Camera Widget */}
           <div className="w-full max-w-3xl" ref={videoRef}>
             {/* <CameraWidget recognizeFace={recognizeFace} videoRef={videoRef} /> */}
@@ -183,7 +191,9 @@ const Dashboard = () => {
                     <span className="font-medium text-purple-700">
                       {entry?.name}
                     </span>
-                    <span className="text-gray-600 text-sm">{entry?.matricNo}</span>
+                    <span className="text-gray-600 text-sm">
+                      {entry?.matricNo}
+                    </span>
                     <span className="text-gray-500 text-sm">{entry?.time}</span>
                   </motion.div>
                 ))
@@ -200,53 +210,64 @@ const Dashboard = () => {
           <div className="flex flex-col flex-grow justify-center mt-[4rem] items-center gap-4">
             <h3 className="text-lg font-semibold">Select Attendance List</h3>
             <div className="p-2 border-2 flex flex-col gap-4 rounded-md border-purple-600">
-              {
-                attendanceLists.map((list, index) => (
-                  <div onClick={() => {
-                    setSelectedList(list)
+              {attendanceLists.map((list, index) => (
+                <div
+                  onClick={() => {
+                    setSelectedList(list);
                     // scroller.scrollTo('dashboard', {
                     //   smooth: true,
                     //   offset: -100
                     // })
-                  }} key={index} className="w-full p-4 bg-gray-100 rounded-md cursor-pointer flex gap-8 font-medium justify-between">
-                    <p>{list?.fileName}</p>
-                    <p className="flex items-center gap-2">{list?.attendees?.length} <FaUser className="text-purple-600" /></p>
-                  </div>
-                ))
-              }
+                  }}
+                  key={index}
+                  className="w-full p-4 bg-gray-100 rounded-md cursor-pointer flex gap-8 font-medium justify-between"
+                >
+                  <p>{list?.fileName}</p>
+                  <p className="flex items-center gap-2">
+                    {list?.attendees?.length}{" "}
+                    <FaUser className="text-purple-600" />
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
           <button
             onClick={handleDetection}
             className="fixed bottom-6 right-6 bg-purple-600 text-white p-4 rounded-full shadow-lg hover:bg-purple-700 transition-colors focus:outline-none"
           >
-            {
-              activeDetection ? 'End Detection' : 'Begin Detection'
-            }
+            {activeDetection ? "End Detection" : "Begin Detection"}
           </button>
-        </div> : <div className="flex flex-col flex-grow justify-center items-center gap-4">
-          <h3 className="text-lg font-semibold">Select Attendance List</h3>
-          {
-            !attendanceLists || attendanceLists?.length === 0 ? <div>Login as admin to create a list</div> :
-              <div className="p-2 border-2 flex flex-col gap-4 rounded-md border-purple-600">
-                {
-                  attendanceLists.map((list, index) => (
-                    <div onClick={() => {
-                      setSelectedList(list)
-                      // scroller.scrollTo('dashboard', {
-                      //   smooth: true,
-                      //   offset: -100
-                      // })
-                    }} key={index} className="w-full p-4 bg-gray-100 rounded-md cursor-pointer flex gap-8 font-medium justify-between">
-                      <p>{list?.fileName}</p>
-                      <p className="flex items-center gap-2">{list?.attendees?.length} <FaUser className="text-purple-600" /></p>
-                    </div>
-                  ))
-                }
-              </div>
-          }
         </div>
-      }
+      ) : (
+        <div className="flex flex-col flex-grow justify-center items-center gap-4">
+          <h3 className="text-lg font-semibold">Select Attendance List</h3>
+          {!attendanceLists || attendanceLists?.length === 0 ? (
+            <div>Login as admin to create a list</div>
+          ) : (
+            <div className="p-2 border-2 flex flex-col gap-4 rounded-md border-purple-600">
+              {attendanceLists.map((list, index) => (
+                <div
+                  onClick={() => {
+                    setSelectedList(list);
+                    // scroller.scrollTo('dashboard', {
+                    //   smooth: true,
+                    //   offset: -100
+                    // })
+                  }}
+                  key={index}
+                  className="w-full p-4 bg-gray-100 rounded-md cursor-pointer flex gap-8 font-medium justify-between"
+                >
+                  <p>{list?.fileName}</p>
+                  <p className="flex items-center gap-2">
+                    {list?.attendees?.length}{" "}
+                    <FaUser className="text-purple-600" />
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

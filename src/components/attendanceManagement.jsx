@@ -13,7 +13,7 @@ const AttendanceManagement = ({
   handleStudentStatusChange,
 }) => {
   return (
-    <div className="container p-4 bg-gray-200 rounded-md">
+    <div className="bg-white rounded-2xl shadow-lg p-4 md:p-6 w-full">
       <div className="flex flex-col md:flex-row items-center justify-between gap-4">
         <h2 className="text-lg font-bold text-black">Attendance Management</h2>
         <button

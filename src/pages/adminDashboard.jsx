@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from "react";
 import {
   databaseKeys,
+  deleteAllFromDatabase,
+  deleteFromDatabase,
   findItemById,
   loadFromDatabase,
   saveToDatabase,
@@ -42,26 +44,25 @@ const AdminPage = () => {
 
   const navigate = useNavigate();
 
+  const getAttendanceLists = async () => {
+    const savedDepartments =
+      (await loadFromDatabase(databaseKeys.DEPARTMENTS)) || [];
+
+    const normalizedDepartments = Array.isArray(savedDepartments)
+      ? savedDepartments
+      : [];
+
+    setDepartments(normalizedDepartments);
+
+    if (normalizedDepartments.length > 0 && !selectedDepartment) {
+      setSelectedDepartment(normalizedDepartments[0]?.name);
+    }
+    const data = (await loadFromDatabase(databaseKeys.ATTENDANCE)) || [];
+    setAttendanceData(Array.isArray(data) ? data : []);
+  };
+
   useEffect(() => {
-    (async () => {
-      const savedDepartments =
-        (await loadFromDatabase(databaseKeys.DEPARTMENTS)) || [];
-
-      // Flatten and filter only string values
-      const normalizedDepartments = Object.values(savedDepartments)
-        .flat()
-        .filter((item) => typeof item === "string");
-
-      console.log("Normalized Departments:", normalizedDepartments);
-      setDepartments(normalizedDepartments);
-
-      if (normalizedDepartments.length > 0 && !selectedDepartment) {
-        setSelectedDepartment(normalizedDepartments[0]);
-      }
-
-      const data = (await loadFromDatabase(databaseKeys.ATTENDANCE)) || [];
-      setAttendanceData(Array.isArray(data) ? data : []);
-    })();
+    getAttendanceLists();
   }, []);
 
   const formatTime = (totalSeconds) => {
@@ -112,32 +113,38 @@ const AdminPage = () => {
       toast.error("Department name cannot be empty");
       return;
     }
-    if (departments.includes(newDepartment)) {
+
+    if (departments.map((d) => d.name).includes(newDepartment)) {
       toast.error("Department already exists!");
       return;
     }
-    const updated = [
-      ...departments,
-      {
-        id: uid(),
-        name: newDepartment,
-      },
-    ];
-    setDepartments(updated);
-    await saveToDatabase(databaseKeys.DEPARTMENTS, {
+
+    const newDepartmentObject = {
       id: uid(),
       name: newDepartment,
-    });
+    };
+
+    const updated = [...departments, newDepartmentObject];
+
+    setDepartments(updated);
+
+    // 🔥 Save the **whole array** instead of one object
+    await saveToDatabase(databaseKeys.DEPARTMENTS, newDepartmentObject);
+
+    toast.success("Department added successfully");
     setNewDepartment("");
+    getAttendanceLists(); // Refresh from DB
   };
 
-  const handleRemovedepartment = async (name) => {
-    const updated = departments.filter((d) => d !== name);
+
+  // fix this code aspect, i can't seem to figure it out
+
+  const handleRemovedepartment = async (id) => {
+    const updated = departments.filter((d) => d.id !== id);
     setDepartments(updated);
     await saveToDatabase(databaseKeys.DEPARTMENTS, updated);
-    if (selectedDepartment === name && updated.length) {
-      setSelectedDepartment(updated[0]);
-    }
+    toast.success("Department removed successfully");
+    getAttendanceLists(); // Optional, only if needed to refresh from DB
   };
 
   const toggleOpen = (fileName) => {
@@ -181,6 +188,7 @@ const AdminPage = () => {
     const updated = [...attendanceData, newConfig];
     setAttendanceData(updated);
     await saveToDatabase(databaseKeys.ATTENDANCE, updated);
+    getAttendanceLists();
     toast.success("Attendance created successfully!");
     setShowNewAttendanceModal(false);
   };
@@ -208,10 +216,10 @@ const AdminPage = () => {
   }
 
   return (
-    <div className="bg-ThamarBlack min-h-screen p-2 md:p-8 text-white space-y-6">
+    <div className=" min-h-screen p-2 py-6 md:p-8 text-white space-y-6 w-full m-0">
       {loading && <LoadingScreen />}
       <section className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-3 gap-6 w-full">
-        <div className="container flex flex-col items-center justify-center gap-4 p-4 bg-gray-200 rounded-md w-full">
+        <div className="bg-white rounded-2xl shadow-lg p-4 md:p-6 w-full flex flex-col items-center justify-center gap-4">
           <h2 className="text-lg font-bold text-black">Camera Control</h2>
           <p className="text-black">Camera Time (in minutes):</p>
           <TimeInput />
@@ -236,7 +244,7 @@ const AdminPage = () => {
         </div>
 
         {/* department Management Section */}
-        <div className="container col-span-2 p-4 bg-gray-200 rounded-md">
+        <div className="col-span-2 bg-white rounded-2xl shadow-lg p-4 md:p-6 w-full">
           <h2 className="text-lg font-bold text-black mb-4">
             Department Management
           </h2>
@@ -256,16 +264,16 @@ const AdminPage = () => {
             </button>
           </div>
           <ul className="mt-4 rounded-md divide-y divide-gray-500">
-            {departments.map((department) => (
+            {departments.map((department, index) => (
               <li
-                key={department.id}
+                key={index}
                 className="flex justify-between items-center p-2 bg-white rounded-md text-black"
               >
                 <span>{department.name}</span>
                 <span className="flex items-center gap-4">
                   <button
                     className="text-red-500"
-                    onClick={() => handleRemovedepartment(department)}
+                    onClick={() => handleRemovedepartment(department.id)}
                   >
                     Remove
                   </button>
