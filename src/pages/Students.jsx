@@ -28,7 +28,7 @@ const StudentsPage = () => {
                 <tr>
                   <th className="p-3 text-left">Name</th>
                   <th className="p-3 text-left">Matric Number</th>
-                  <th className="p-3 text-left">Course</th>
+                  <th className="p-3 text-left">Department</th>
                 </tr>
               </thead>
               <tbody>
@@ -36,7 +36,7 @@ const StudentsPage = () => {
                   <tr key={student.id} className="border-b hover:bg-purple-50">
                     <td className="p-3">{student.name}</td>
                     <td className="p-3">{student.matricNo}</td>
-                    <td className="p-3">{student.course}</td>
+                    <td className="p-3">{student.department}</td>
                   </tr>
                 ))}
               </tbody>

@@ -15,36 +15,19 @@ import * as faceapi from "face-api.js";
 
 const Dashboard = () => {
   const [play] = useSound(successSound);
-  const [recentEntries, setRecentEntries] = useState([]);
-  const [isMarked, setIsMarked] = useState(false);
   const videoRef = useRef(null);
   const [attendanceLists, setAttendanceLists] = useState([])
   const [selectedList, setSelectedList] = useState(null)
 
-  useEffect(() => {
-    const savedEntries = loadFromDatabase(databaseKeys.ATTENDANCE) || [];
-    if (savedEntries.length > 0) {
-      setRecentEntries(savedEntries[savedEntries.length - 1].attendees || []);
-    }
-  }, []);
 
   const handleNewEntry = (newEntry) => {
-    let currentAttendance = loadFromDatabase(databaseKeys.ATTENDANCE) || [];
     let latestAttendance = selectedList;
 
-    if (!latestAttendance) {
-      latestAttendance = {
-        id: Date.now(), // Ensure it has an ID
-        date: new Date().toLocaleDateString(),
-        attendees: [],
-      };
-      currentAttendance.push(latestAttendance);
-    }
-
     // Check if entry already exists
-    const alreadyMarked = latestAttendance.attendees.some(
+    console.log(selectedList?.attendees)
+    const alreadyMarked = selectedList?.attendees?.some(
       (entry) => entry.matricNo === newEntry.matricNo
-    );
+    ) || false;
 
     if (alreadyMarked) {
       toast.error("Entry already exists");
@@ -52,25 +35,37 @@ const Dashboard = () => {
     }
 
     // Add new attendee
-    latestAttendance.attendees.push(newEntry);
+    const attendees = latestAttendance?.attendees || []
+    latestAttendance = { ...latestAttendance, attendees: [...attendees, newEntry] };
 
     // Update attendance list properly
-    const updatedAttendance = currentAttendance.map((attendance) =>
-      attendance.id === latestAttendance.id ? latestAttendance : attendance
-    );
 
-    console.log(updatedAttendance);
-    saveToDatabase(databaseKeys.ATTENDANCE, updatedAttendance);
+    // Update selectedList with new entry (only if not already present)
+    setSelectedList(prev => {
+      const attendees = prev?.attendees || [];
+      const alreadyExists = attendees.some(entry => entry.matricNo === newEntry.matricNo);
+
+      if (alreadyExists) return prev;
+
+      const updatedList = {
+        ...prev,
+        attendees: [...attendees, newEntry]
+      };
+
+      // Save updated list to database
+      saveToDatabase(databaseKeys.ATTENDANCE, updatedList);
+
+      return updatedList;
+    });
 
     // Update recent entries
-    setRecentEntries([newEntry, ...recentEntries]);
     toast.success(`${newEntry.name} has been marked Present!`);
   };
 
   useEffect(() => {
-    const attendance = loadFromDatabase(databaseKeys.ATTENDANCE) || [];
-    console.log(attendance)
-    setAttendanceLists(attendance)
+    loadFromDatabase(databaseKeys.ATTENDANCE).then(data => {
+      setAttendanceLists(data)
+    })
   }, [])
 
   const recognizeFace = async () => {
@@ -78,54 +73,48 @@ const Dashboard = () => {
       console.log("Video not ready");
       return;
     }
-  
-    const students = localStorage.getItem("students");
-    if (!students) {
+
+    const students = await loadFromDatabase(databaseKeys.STUDENTS) || [];
+    if (!students || !students?.length) {
       alert("No registered face found.");
       return;
     }
-  
-    const parsedStudents = JSON.parse(students);
-    if (parsedStudents.length === 0) {
-      alert("No registered face found.");
-      return;
-    }
-  
+
     const options = new faceapi.TinyFaceDetectorOptions({
       inputSize: 512,
       scoreThreshold: 0.4,
     });
-  
+
     // **Detect Multiple Faces**
     const detections = await faceapi
       .detectAllFaces(videoRef.current, options)
       .withFaceLandmarks()
       .withFaceDescriptors(); // This will detect multiple faces
-  
+
     if (!detections || detections.length === 0) {
       console.log("No face detected.");
       toast.error("No face detected");
       return;
     }
-  
+
     console.log(`Detected ${detections.length} faces`);
-  
+
     // Convert stored students' face data into LabeledFaceDescriptors
-    const labeledDescriptors = parsedStudents.map((student) => {
+    const labeledDescriptors = students.map((student) => {
       const storedArray = new Float32Array(Object.values(student.faceData));
       return new faceapi.LabeledFaceDescriptors(student.name, [storedArray]);
     });
-  
+
     const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
-  
+
     detections.forEach((detection) => {
       const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
-  
+
       if (bestMatch.label !== "unknown") {
-        const matchedStudent = parsedStudents.find(
+        const matchedStudent = students.find(
           (student) => student.name === bestMatch.label
         );
-  
+
         if (matchedStudent) {
           const newEntry = {
             id: Date.now(),
@@ -135,7 +124,7 @@ const Dashboard = () => {
             date: new Date().toLocaleDateString(),
             status: "Present",
           };
-  
+
           handleNewEntry(newEntry);
         }
       } else {
@@ -143,11 +132,11 @@ const Dashboard = () => {
       }
     });
   };
-  
+
 
   const [activeDetection, setActiveDetection] = useState(false);
   const intervalRef = useRef(null);
-  
+
   const handleDetection = () => {
     if (!activeDetection) {
       recognizeFace()
@@ -231,7 +220,7 @@ const Dashboard = () => {
             className="fixed bottom-6 right-6 bg-purple-600 text-white p-4 rounded-full shadow-lg hover:bg-purple-700 transition-colors focus:outline-none"
           >
             {
-              activeDetection? 'End Detection': 'Begin Detection'
+              activeDetection ? 'End Detection' : 'Begin Detection'
             }
           </button>
         </div> : <div className="flex flex-col flex-grow justify-center items-center gap-4">

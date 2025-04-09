@@ -10,13 +10,14 @@ import { useAdminContext } from "../context/adminContext";
 import TimeInput from "../components/timeInput";
 import { FiPlus, FiDownload } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
+import { uid } from "uid";
 
 const AdminPage = () => {
-  const [courses, setCourses] = useState([]);
-  const [newCourse, setNewCourse] = useState("");
+  const [departments, setDepartments] = useState([]);
+  const [newDepartment, setNewDepartment] = useState("");
   const [attendanceData, setAttendanceData] = useState([]);
   const [saving, setSaving] = useState(false);
-  const [selectedCourse, setSelectedCourse] = useState("");
+  const [selectedDepartment, setSelectedDepartment] = useState("");
   const {
     isCameraActive,
     setIsCameraActive,
@@ -36,15 +37,17 @@ const AdminPage = () => {
   };
 
   const loadAttendanceData = () => {
-    const attendance = loadFromDatabase(databaseKeys.ATTENDANCE) || [];
-    setAttendanceData(attendance);
+    loadFromDatabase(databaseKeys.ATTENDANCE).then(data => {
+      setAttendanceData(data || []);
+    })
   };
 
   useEffect(() => {
-    const savedCourses = loadFromDatabase(databaseKeys.COURSES) || [];
-    setCourses(savedCourses);
-    if (savedCourses.length > 0 && !selectedCourse) {
-      setSelectedCourse(savedCourses[0]);
+    const saveddepartments = loadFromDatabase(databaseKeys.DEPARTMENTS).then(data => {
+      setDepartments(data);
+    })
+    if (saveddepartments.length > 0 && !selectedDepartment) {
+      setSelectedDepartment(saveddepartments[0]);
     }
     loadAttendanceData();
   }, []);
@@ -59,25 +62,25 @@ const AdminPage = () => {
     }
   };
 
-  const handleAddCourse = () => {
-    if (courses.includes(newCourse)) {
-      toast.error("Course already exists!");
+  const handleAddDepartment = () => {
+    if (departments.includes(newDepartment)) {
+      toast.error("department already exists!");
       return;
     }
-    const updatedCourses = [...courses, newCourse];
-    setCourses(updatedCourses);
-    saveToDatabase(databaseKeys.COURSES, updatedCourses);
-    setNewCourse("");
+    const updatedDepartments = [...departments, newDepartment];
+    setDepartments(updatedDepartments);
+    saveToDatabase(databaseKeys.DEPARTMENTS, updatedDepartments);
+    setNewDepartment("");
   };
 
-  const handleRemoveCourse = (courseToRemove) => {
-    const updatedCourses = courses.filter(
-      (course) => course !== courseToRemove
+  const handleRemovedepartment = (departmentToRemove) => {
+    const updatedDepartments = departments.filter(
+      (department) => department !== departmentToRemove
     );
-    setCourses(updatedCourses);
-    saveToDatabase(databaseKeys.COURSES, updatedCourses);
-    if (selectedCourse === courseToRemove && updatedCourses.length) {
-      setSelectedCourse(updatedCourses[0]);
+    setDepartments(updatedDepartments);
+    saveToDatabase(databaseKeys.DEPARTMENTS, updatedDepartments);
+    if (selectedDepartment === departmentToRemove && updatedDepartments.length) {
+      setSelectedDepartment(updatedDepartments[0]);
     }
   };
 
@@ -88,17 +91,13 @@ const AdminPage = () => {
   };
 
   const handleStudentStatusChange = (record, studentIndex, newStatus) => {
-    const updatedAttendanceData = attendanceData.map((item) => {
-      if (item.fileName === record.fileName) {
-        const updatedAttendees = item.attendees.map((attendee, idx) =>
-          idx === studentIndex ? { ...attendee, status: newStatus } : attendee
-        );
-        return { ...item, attendees: updatedAttendees };
-      }
-      return item;
-    });
-    setAttendanceData(updatedAttendanceData);
-    saveToDatabase(databaseKeys.ATTENDANCE, updatedAttendanceData);
+
+    const updatedRecord = record.attendees.map((attendee, idx) =>
+      idx === studentIndex ? { ...attendee, status: newStatus } : attendee
+    );
+
+
+    saveToDatabase(databaseKeys.ATTENDANCE, { id: record?.id, data: updatedRecord });
   };
 
   const sortedAttendance = [...attendanceData].sort(
@@ -106,21 +105,20 @@ const AdminPage = () => {
   );
 
   const saveAttendanceConfig = (attendanceConfig) => {
-    const updatedAttendance = [...attendanceData, attendanceConfig];
-    saveToDatabase(databaseKeys.ATTENDANCE, updatedAttendance);
-    setAttendanceData(updatedAttendance);
+    saveToDatabase(databaseKeys.ATTENDANCE, attendanceConfig).then(()=> loadAttendanceData())
   };
 
   const handleAttendanceSubmit = (e) => {
     e.preventDefault();
 
     const newAttendanceConfig = {
-      fileName: `${currentFileName}-${new Date().toLocaleDateString()}-${selectedCourse}`,
-      course: selectedCourse,
+      fileName: `${currentFileName}-${new Date().toLocaleDateString()}-${selectedDepartment}`,
+      department: selectedDepartment,
       date: new Date().toLocaleDateString(),
       time: new Date().toLocaleTimeString(),
       status: "active",
       attendees: [],
+      id: uid()
     };
 
     saveAttendanceConfig(newAttendanceConfig);
@@ -209,43 +207,43 @@ const AdminPage = () => {
           </button>
         </div>
 
-        {/* Course Management Section */}
+        {/* department Management Section */}
         <div className="container col-span-2 p-4 bg-gray-200 rounded-md">
           <h2 className="text-lg font-bold text-black mb-4">
-            Course Management
+            Department Management
           </h2>
           <div className="flex flex-col sm:flex-row gap-4">
             <input
               type="text"
-              placeholder="Enter Course Name"
-              value={newCourse}
-              onChange={(e) => setNewCourse(e.target.value)}
+              placeholder="Enter Department Name"
+              value={newDepartment}
+              onChange={(e) => setNewDepartment(e.target.value)}
               className="p-2 bg-white border border-gray-400 rounded-md flex-1 text-black outline-green-500"
             />
             <button
               className="bg-green-600 px-4 py-2 rounded-md text-white"
-              onClick={handleAddCourse}
+              onClick={handleAddDepartment}
             >
-              Add Course
+              Add Department
             </button>
           </div>
           <ul className="mt-4 rounded-md divide-y divide-gray-500">
-            {courses.map((course, index) => (
+            {departments.map((department, index) => (
               <li
                 key={index}
                 className="flex justify-between items-center p-2 bg-white rounded-md text-black"
               >
-                <span>{course}</span>
+                <span>{department}</span>
                 <span className="flex items-center gap-4">
                   {/* <button
                     className="text-purple-500"
-                    onClick={() => handleRemoveCourse(course)}
+                    onClick={() => handleRemovedepartment(department)}
                   >
                     Create Attendance
                   </button> */}
                   <button
                     className="text-red-500"
-                    onClick={() => handleRemoveCourse(course)}
+                    onClick={() => handleRemovedepartment(department)}
                   >
                     Remove
                   </button>
@@ -274,10 +272,10 @@ const AdminPage = () => {
           <h2 className="text-lg font-bold text-black mb-4">Attendance List</h2>
           <div className="space-y-4">
             {sortedAttendance.map((attendance, index) => {
-              const presentCount = attendance.attendees.filter(
+              const presentCount = attendance?.attendees?.filter(
                 (attendee) => attendee.status === "Present"
-              ).length;
-              const totalCount = attendance.attendees.length;
+              )?.length;
+              const totalCount = attendance?.attendees?.length;
 
               return (
                 <div
@@ -382,19 +380,19 @@ const AdminPage = () => {
               Create New Attendance
             </h2>
             <form onSubmit={handleAttendanceSubmit}>
-              {/* Select Course */}
-              <label htmlFor="course" className="block text-black mb-2">
-                Select Course
+              {/* Select department */}
+              <label htmlFor="department" className="block text-black mb-2">
+                Select Department
               </label>
               <select
-                id="course"
-                value={selectedCourse}
-                onChange={(e) => setSelectedCourse(e.target.value)}
+                id="department"
+                value={selectedDepartment}
+                onChange={(e) => setSelectedDepartment(e.target.value)}
                 className="w-full p-2 mb-4 bg-white border border-gray-400 rounded-md text-black outline-green-500"
               >
-                {courses.map((course, index) => (
-                  <option key={index} value={course}>
-                    {course}
+                {departments.map((department, index) => (
+                  <option key={index} value={department}>
+                    {department}
                   </option>
                 ))}
               </select>
@@ -415,8 +413,8 @@ const AdminPage = () => {
               {/* Preview Generated File Name (no timestamp yet) */}
               <p className="mb-4 text-black">
                 <strong>Generated File Name:</strong>{" "}
-                {currentFileName && selectedCourse
-                  ? `${currentFileName}-${selectedCourse}`
+                {currentFileName && selectedDepartment
+                  ? `${currentFileName}-${selectedDepartment}`
                   : "—"}
               </p>
 

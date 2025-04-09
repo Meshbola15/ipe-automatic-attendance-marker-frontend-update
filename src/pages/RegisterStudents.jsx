@@ -10,42 +10,59 @@ import * as faceapi from "face-api.js";
 import CameraWidget from "../components/CameraWidget";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
+import { uid } from "uid";
 
 const RegisterStudent = () => {
   const validationSchema = Yup.object({
     name: Yup.string().required("Required"),
     matricNo: Yup.string().required("Required"),
-    course: Yup.string().required("Required"),
+    department: Yup.string().required("Required"),
   });
 
-  const [courses, setCourses] = useState([]);
+  const [departments, setDepartments] = useState([]);
 
   useEffect(() => {
-    const savedCourses = loadFromDatabase(databaseKeys.COURSES) || [];
-    setCourses(savedCourses);
+    loadFromDatabase(databaseKeys.DEPARTMENTS).then(data => {
+      setDepartments(data);
+    })
   }, []);
 
   const videoRef = useRef(null);
 
   const handleSubmit = async (values, { resetForm }) => {
     const { matricNo } = values;
-    const students = loadFromDatabase(databaseKeys.STUDENTS) || [];
+    const students = await loadFromDatabase(databaseKeys.STUDENTS) || [];
 
     if (students.some((student) => student.matricNo === matricNo)) {
       toast.error("Student already exists");
       return;
     }
 
+    const labeledDescriptors = students.map((student) => {
+      const storedArray = new Float32Array(Object.values(student.faceData));
+      return new faceapi.LabeledFaceDescriptors(student.name, [storedArray]);
+    });
+    const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
+    const registeredFaces = students.map(student => student.faceData)
+
+    for (const face of registeredFaces) {
+      const bestMatch = faceMatcher.findBestMatch(face);
+      if (bestMatch.label !== 'unknown') {
+        toast.error("Face already exists you fraud!");
+        return; // Exits the entire function
+      }
+    }    
+
     const newStudentFaceData = await registerFace();
     if (!newStudentFaceData) return;
 
     const newStudent = {
       ...values,
-      id: Date.now(),
+      id: uid(),
       faceData: newStudentFaceData,
     };
 
-    saveToDatabase(databaseKeys.STUDENTS, [...students, newStudent]);
+    saveToDatabase(databaseKeys.STUDENTS, newStudent);
     toast.success(`${newStudent.name} has been registered successfully!`);
     resetForm();
   };
@@ -75,7 +92,7 @@ const RegisterStudent = () => {
         Student Registration
       </h1>
       <Formik
-        initialValues={{ name: "", matricNo: "", course: "" }}
+        initialValues={{ name: "", matricNo: "", department: "" }}
         validationSchema={validationSchema}
         onSubmit={handleSubmit}
       >
@@ -117,22 +134,22 @@ const RegisterStudent = () => {
             </div>
 
             <div>
-              <label className="block text-gray-700 mb-2">Course</label>
+              <label className="block text-gray-700 mb-2">Department</label>
               <Field
                 as="select"
-                name="course"
+                name="department"
                 className="w-full p-2 border rounded-lg"
-                onChange={(e) => setFieldValue("course", e.target.value)}
+                onChange={(e) => setFieldValue("department", e.target.value)}
               >
-                <option value="">Select a course</option>
-                {courses.map((course, index) => (
-                  <option key={index} value={course}>
-                    {course}
+                <option value="">Select a department</option>
+                {departments.map((department, index) => (
+                  <option key={index} value={department}>
+                    {department}
                   </option>
                 ))}
               </Field>
               <ErrorMessage
-                name="course"
+                name="department"
                 component="div"
                 className="text-red-500 text-sm"
               />
