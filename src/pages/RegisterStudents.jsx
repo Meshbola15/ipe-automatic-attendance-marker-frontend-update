@@ -144,7 +144,7 @@ const RegisterStudent = () => {
                 <option value="">Select a department</option>
                 {departments.map((department, index) => (
                   <option key={index} value={department}>
-                    {department}
+                    {department.name}
                   </option>
                 ))}
               </Field>

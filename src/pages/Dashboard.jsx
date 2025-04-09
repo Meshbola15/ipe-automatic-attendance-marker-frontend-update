@@ -1,72 +1,16 @@
 // src/pages/Dashboard.jsx
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 // eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
 // import useSound from "use-sound";
 // import successSound from "../assets/sound.mp3";
-import {
-  saveToDatabase,
-  loadFromDatabase,
-  databaseKeys,
-} from "../utils/database";
-import CameraWidget from "../components/CameraWidget";
-import { toast } from "react-toastify";
+import { loadFromDatabase, databaseKeys } from "../utils/database";
 import { FaUser } from "react-icons/fa6";
-import * as faceapi from "face-api.js";
 
 const Dashboard = () => {
   // const [play] = useSound(successSound);
-  const videoRef = useRef(null);
   const [attendanceLists, setAttendanceLists] = useState([]);
   const [selectedList, setSelectedList] = useState(null);
-
-  const handleNewEntry = (newEntry) => {
-    let latestAttendance = selectedList;
-
-    // Check if entry already exists
-    console.log(selectedList?.attendees);
-    const alreadyMarked =
-      selectedList?.attendees?.some(
-        (entry) => entry.matricNo === newEntry.matricNo
-      ) || false;
-
-    if (alreadyMarked) {
-      toast.error("Entry already exists");
-      return;
-    }
-
-    // Add new attendee
-    const attendees = latestAttendance?.attendees || [];
-    latestAttendance = {
-      ...latestAttendance,
-      attendees: [...attendees, newEntry],
-    };
-
-    // Update attendance list properly
-
-    // Update selectedList with new entry (only if not already present)
-    setSelectedList(async (prev) => {
-      const attendees = prev?.attendees || [];
-      const alreadyExists = attendees.some(
-        (entry) => entry.matricNo === newEntry.matricNo
-      );
-
-      if (alreadyExists) return prev;
-
-      const updatedList = {
-        ...prev,
-        attendees: [...attendees, newEntry],
-      };
-
-      // Save updated list to database
-      await saveToDatabase(databaseKeys.ATTENDANCE, updatedList);
-
-      return updatedList;
-    });
-
-    // Update recent entries
-    toast.success(`${newEntry.name} has been marked Present!`);
-  };
 
   useEffect(() => {
     const getAttendanceLists = async () => {
@@ -78,97 +22,10 @@ const Dashboard = () => {
     getAttendanceLists();
   }, []);
 
-  const recognizeFace = async () => {
-    if (!videoRef.current || videoRef.current.readyState !== 4) {
-      console.log("Video not ready");
-      return;
-    }
-
-    const students = (await loadFromDatabase(databaseKeys.STUDENTS)) || [];
-    if (!students || !students?.length) {
-      alert("No registered face found.");
-      return;
-    }
-
-    const options = new faceapi.TinyFaceDetectorOptions({
-      inputSize: 512,
-      scoreThreshold: 0.4,
-    });
-
-    // **Detect Multiple Faces**
-    const detections = await faceapi
-      .detectAllFaces(videoRef.current, options)
-      .withFaceLandmarks()
-      .withFaceDescriptors(); // This will detect multiple faces
-
-    if (!detections || detections.length === 0) {
-      console.log("No face detected.");
-      toast.error("No face detected");
-      return;
-    }
-
-    console.log(`Detected ${detections.length} faces`);
-
-    // Convert stored students' face data into LabeledFaceDescriptors
-    const labeledDescriptors = students.map((student) => {
-      const storedArray = new Float32Array(Object.values(student.faceData));
-      return new faceapi.LabeledFaceDescriptors(student.name, [storedArray]);
-    });
-
-    const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
-
-    detections.forEach((detection) => {
-      const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
-
-      if (bestMatch.label !== "unknown") {
-        const matchedStudent = students.find(
-          (student) => student.name === bestMatch.label
-        );
-
-        if (matchedStudent) {
-          const newEntry = {
-            id: Date.now(),
-            name: matchedStudent.name,
-            matricNo: matchedStudent.matricNo,
-            time: new Date().toLocaleTimeString(),
-            date: new Date().toLocaleDateString(),
-            status: "Present",
-          };
-
-          handleNewEntry(newEntry);
-        }
-      } else {
-        console.log("Face detected but no match found.");
-      }
-    });
-  };
-
-  const [activeDetection, setActiveDetection] = useState(false);
-  const intervalRef = useRef(null);
-
-  const handleDetection = () => {
-    if (!activeDetection) {
-      recognizeFace();
-      intervalRef.current = setInterval(() => {
-        recognizeFace();
-      }, 10000);
-      setActiveDetection(true);
-    } else {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null; // Reset ref after clearing interval
-      setActiveDetection(false);
-    }
-  };
-
   return (
     <div className="w-full">
       {selectedList ? (
         <div className="min-h-screen bg-purple-50 p-6 md:p-8 flex flex-col items-center">
-          {/* Camera Widget */}
-          <div className="w-full max-w-3xl" ref={videoRef}>
-            {/* <CameraWidget recognizeFace={recognizeFace} videoRef={videoRef} /> */}
-          </div>
-
           {/* Recent Entries Section */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -231,12 +88,6 @@ const Dashboard = () => {
               ))}
             </div>
           </div>
-          <button
-            onClick={handleDetection}
-            className="fixed bottom-6 right-6 bg-purple-600 text-white p-4 rounded-full shadow-lg hover:bg-purple-700 transition-colors focus:outline-none"
-          >
-            {activeDetection ? "End Detection" : "Begin Detection"}
-          </button>
         </div>
       ) : (
         <div className="flex flex-col flex-grow justify-center items-center gap-4">

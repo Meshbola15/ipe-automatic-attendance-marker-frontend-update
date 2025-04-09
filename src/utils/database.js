@@ -10,7 +10,6 @@ export const databaseKeys = {
   COURSES: "courses",
 };
 
-// 🔐 Save to DB with merge behavior for objects and replacement for arrays
 export const saveToDatabase = async (key, newData) => {
   if (!key || !newData) {
     console.error("Missing key or newData for saveToDatabase");
@@ -22,9 +21,8 @@ export const saveToDatabase = async (key, newData) => {
     const snapshot = await get(child(dbRef, key));
     const existingData = snapshot.exists() ? snapshot.val() : null;
 
-    // 🔁 If data is array-based (legacy), merge by ID
     if (Array.isArray(existingData)) {
-      const index = existingData.findIndex((item) => item.id === newData.id);
+      const index = existingData.findIndex((item) => item?.id === newData.id);
       if (index >= 0) {
         existingData[index] = newData;
       } else {
@@ -32,10 +30,8 @@ export const saveToDatabase = async (key, newData) => {
       }
       await set(child(dbRef, key), existingData);
     } else if (newData.id) {
-      // 🧱 Object-based storage (e.g., ADMIN)
       await set(child(dbRef, `${key}/${newData.id}`), newData);
     } else {
-      // 🧼 Just replace the whole key (fallback)
       await set(child(dbRef, key), newData);
     }
 
@@ -45,7 +41,6 @@ export const saveToDatabase = async (key, newData) => {
   }
 };
 
-// 🧲 Load data (optionally by ID)
 export const loadFromDatabase = async (key, userId = null) => {
   try {
     const dbRef = ref(db);
@@ -64,7 +59,6 @@ export const loadFromDatabase = async (key, userId = null) => {
   }
 };
 
-// 🗑 Delete by ID
 export const deleteFromDatabase = async (key, id) => {
   try {
     await set(child(ref(db), `${key}/${id}`), null);
@@ -74,7 +68,15 @@ export const deleteFromDatabase = async (key, id) => {
   }
 };
 
-// 🛠 Update and merge object data (not array-based)
+export const deleteAllFromDatabase = async (key) => {
+  try {
+    await set(child(ref(db), key), null);
+    console.log(`🗑 Deleted all entries from '${key}'`);
+  } catch (error) {
+    console.error("❌ Error deleting from database:", error);
+  }
+};
+
 export const updateInDatabase = async (key, id, newData) => {
   if (!id || !newData) {
     console.error("Missing ID or data for update.");
@@ -107,17 +109,7 @@ export const findItemById = async (key, id) => {
   try {
     const data = await loadFromDatabase(key);
 
-    // If object (e.g., { id1: {..}, id2: {..} })
-    // if (typeof data === "object" && !Array.isArray(data)) {
     return data[id] || null;
-    // }
-
-    // If array (e.g., [ { id: "123", ... }, ... ])
-    // if (Array.isArray(data)) {
-    //   return data.find((item) => item.id === id) || null;
-    // }
-
-  //  
   } catch (error) {
     console.error("❌ Error in findItemById:", error);
     return null;
