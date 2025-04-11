@@ -4,6 +4,7 @@ import {
   databaseKeys,
   findItemById,
   loadFromDatabase,
+  removeFromDatabase,
   saveToDatabase,
   updateInDatabase,
 } from "../utils/database";
@@ -101,9 +102,9 @@ const AdminPage = () => {
     active
       ? updateLastCameraActiveTimeStamp()
       : await updateInDatabase(databaseKeys.ADMIN, adminDetails.id, {
-          ...adminDetails,
-          cameraLastActiveTime: null,
-        });
+        ...adminDetails,
+        cameraLastActiveTime: null,
+      });
   };
 
   const handleAddDepartment = async () => {
@@ -138,9 +139,7 @@ const AdminPage = () => {
   // fix this code aspect, i can't seem to figure it out
 
   const handleRemovedepartment = async (id) => {
-    const updated = departments.filter((d) => d.id !== id);
-    setDepartments(updated);
-    await saveToDatabase(databaseKeys.DEPARTMENTS, updated);
+    await removeFromDatabase(databaseKeys.DEPARTMENTS, id);
     toast.success("Department removed successfully");
     getAttendanceLists(); // Optional, only if needed to refresh from DB
   };
@@ -185,7 +184,7 @@ const AdminPage = () => {
 
     const updated = [...attendanceData, newConfig];
     setAttendanceData(updated);
-    await saveToDatabase(databaseKeys.ATTENDANCE, updated);
+    await saveToDatabase(databaseKeys.ATTENDANCE, newConfig);
     getAttendanceLists();
     toast.success("Attendance created successfully!");
     setShowNewAttendanceModal(false);
@@ -223,9 +222,8 @@ const AdminPage = () => {
           <TimeInput />
           <p className="text-black">Time Remaining: {timeRemaining}</p>
           <button
-            className={`px-4 py-2 text-white rounded-md w-full ${
-              isCameraActive ? "bg-red-400" : "bg-green-600"
-            }`}
+            className={`px-4 py-2 text-white rounded-md w-full ${isCameraActive ? "bg-red-400" : "bg-green-600"
+              }`}
             onClick={handleCameraToggle}
           >
             {isCameraActive ? "Turn Off Camera" : "Turn On Camera"}
@@ -271,7 +269,7 @@ const AdminPage = () => {
                 <span className="flex items-center gap-4">
                   <button
                     className="text-red-500"
-                    onClick={() => handleRemovedepartment(department.id)}
+                    onClick={() => handleRemovedepartment(department?.id)}
                   >
                     Remove
                   </button>

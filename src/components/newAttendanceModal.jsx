@@ -1,13 +1,13 @@
 import React from "react";
 
 const NewAttendanceModal = ({
-    setShowNewAttendanceModal,
-    handleAttendanceSubmit,
-    selectedDepartment,
-    setSelectedDepartment,
-    departments,
-    currentFileName,
-    setCurrentFileName
+  setShowNewAttendanceModal,
+  handleAttendanceSubmit,
+  selectedDepartment,
+  setSelectedDepartment,
+  departments,
+  currentFileName,
+  setCurrentFileName
 }) => {
   return (
     <section className="fixed inset-0 flex items-center justify-center z-50">
@@ -30,8 +30,8 @@ const NewAttendanceModal = ({
             className="w-full p-2 mb-4 bg-white border border-gray-400 rounded-md text-black outline-green-500"
           >
             {departments.map((dept, i) => (
-              <option key={i} value={dept}>
-                {dept}
+              <option key={i} value={dept?.name}>
+                {dept?.name}
               </option>
             ))}
           </select>

@@ -20,10 +20,12 @@ const CameraPage = () => {
   const [selectedList, setSelectedList] = useState(null);
 
   const handleNewEntry = (newEntry) => {
+    if (!newEntry) {
+      return
+    }
+
     let latestAttendance = selectedList;
 
-    // Check if entry already exists
-    console.log(selectedList?.attendees);
     const alreadyMarked =
       selectedList?.attendees?.some(
         (entry) => entry.matricNo === newEntry.matricNo
@@ -34,36 +36,26 @@ const CameraPage = () => {
       return;
     }
 
-    // Add new attendee
     const attendees = latestAttendance?.attendees || [];
-    latestAttendance = {
-      ...latestAttendance,
-      attendees: [...attendees, newEntry],
-    };
 
-    // Update attendance list properly
-
-    // Update selectedList with new entry (only if not already present)
-    setSelectedList(async (prev) => {
-      const attendees = prev?.attendees || [];
+    setSelectedList(async(prev) => {
       const alreadyExists = attendees.some(
         (entry) => entry.matricNo === newEntry.matricNo
       );
 
       if (alreadyExists) return prev;
 
-      const updatedList = {
-        ...prev,
+      latestAttendance = {
+        ...latestAttendance,
         attendees: [...attendees, newEntry],
       };
 
-      // Save updated list to database
-      await saveToDatabase(databaseKeys.ATTENDANCE, updatedList);
+      await saveToDatabase(databaseKeys.ATTENDANCE, latestAttendance);
+      setSelectedList(latestAttendance)
 
-      return updatedList;
+      return latestAttendance
     });
 
-    // Update recent entries
     toast.success(`${newEntry.name} has been marked Present!`);
   };
 

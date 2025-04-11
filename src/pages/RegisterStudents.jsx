@@ -33,25 +33,27 @@ const RegisterStudent = () => {
     const { matricNo } = values;
     const students = await loadFromDatabase(databaseKeys.STUDENTS) || [];
 
-    if (students.some((student) => student.matricNo === matricNo)) {
-      toast.error("Student already exists");
-      return;
-    }
-
-    const labeledDescriptors = students.map((student) => {
-      const storedArray = new Float32Array(Object.values(student.faceData));
-      return new faceapi.LabeledFaceDescriptors(student.name, [storedArray]);
-    });
-    const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
-    const registeredFaces = students.map(student => student.faceData)
-
-    for (const face of registeredFaces) {
-      const bestMatch = faceMatcher.findBestMatch(face);
-      if (bestMatch.label !== 'unknown') {
-        toast.error("Face already exists you fraud!");
-        return; // Exits the entire function
+    if (students.length) {
+      if (students.some((student) => student.matricNo === matricNo)) {
+        toast.error("Student already exists");
+        return;
       }
-    }    
+
+      const labeledDescriptors = students.map((student) => {
+        const storedArray = new Float32Array(Object.values(student.faceData));
+        return new faceapi.LabeledFaceDescriptors(student.name, [storedArray]);
+      });
+      const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
+      const registeredFaces = students.map(student => student.faceData)
+
+      for (const face of registeredFaces) {
+        const bestMatch = faceMatcher.findBestMatch(face);
+        if (bestMatch.label !== 'unknown') {
+          toast.error("Face already exists you fraud!");
+          return; // Exits the entire function
+        }
+      }
+    }
 
     const newStudentFaceData = await registerFace();
     if (!newStudentFaceData) return;
@@ -61,6 +63,8 @@ const RegisterStudent = () => {
       id: uid(),
       faceData: newStudentFaceData,
     };
+
+    console.log(newStudent)
 
     saveToDatabase(databaseKeys.STUDENTS, newStudent);
     toast.success(`${newStudent.name} has been registered successfully!`);
@@ -143,7 +147,7 @@ const RegisterStudent = () => {
               >
                 <option value="">Select a department</option>
                 {departments.map((department, index) => (
-                  <option key={index} value={department}>
+                  <option key={index} value={department?.name}>
                     {department.name}
                   </option>
                 ))}

@@ -37,9 +37,11 @@ const AdminContextProvider = ({ children }) => {
   };
 
   const onCameraTimeExhausted = () => {
+    console.log(hasNotified)
     if (!hasNotified) {
       toast.info("Camera time has been exhausted.");
       setHasNotified(true);
+      return
     }
     setIsCameraActive(false);
   };
@@ -47,13 +49,14 @@ const AdminContextProvider = ({ children }) => {
   const checkCameraTimeExhausted = async () => {
     if (!adminDetails.id) return;
 
-    const userData = await findItemById(databaseKeys.ADMIN, adminDetails.id);
+    const userData = await findItemById(databaseKeys.ADMIN, adminDetails?.id);
     if (!userData?.cameraLastActiveTime) return;
 
     const currentTime = Date.now();
 
     if (currentTime >= userData.cameraLastActiveTime) {
       onCameraTimeExhausted();
+      return
     } else {
       setIsCameraActive(true);
     }
@@ -67,7 +70,7 @@ const AdminContextProvider = ({ children }) => {
         const stored = localStorage.getItem("admin");
         if (stored) {
           setAdminDetails(
-            await findItemById(databaseKeys.ADMIN, JSON.parse(stored).id)
+            await findItemById(databaseKeys.ADMIN, JSON.parse(stored)?.id)
           );
         }
       } catch (e) {
@@ -81,14 +84,10 @@ const AdminContextProvider = ({ children }) => {
     fetchAdmin();
   }, []);
 
-  // 👇 Check camera time every 1 second
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (adminDetails?.id) checkCameraTimeExhausted();
-    }, 1000);
 
-    return () => clearInterval(interval);
-  }, [adminDetails.id]); // only re-run if the admin ID changes
+  useEffect(() => {
+    if (adminDetails?.id) checkCameraTimeExhausted();
+  }, [adminDetails.id]); 
 
   return (
     <AdminContext.Provider
