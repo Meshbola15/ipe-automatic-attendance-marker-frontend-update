@@ -5,6 +5,7 @@ import { exportToCSV } from "../utils/exportCSV";
 
 const StudentsPage = () => {
   const [students, setStudents] = useState([]);
+  const [department, setDepartment] = useState([])
 
   const fetchStudents = async () => {
     const savedStudents = (await loadFromDatabase(databaseKeys.STUDENTS)) || [];
@@ -20,6 +21,12 @@ const StudentsPage = () => {
     exportToCSV(students, "students.csv");
   };
 
+  // setDepartment(await loadFromDatabase(databaseKeys.DEPARTMENTS))
+
+  // const sectionTitle = students.filter((students)=>department.map((_department, index)=>(
+  //   _department === students.department
+  // )))
+
   return (
     <div className="min-h-screen bg-purple-50 mt-8 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
@@ -31,14 +38,16 @@ const StudentsPage = () => {
             <table className="w-full bg-white rounded-xl shadow-lg">
               <thead className="bg-purple-50">
                 <tr>
+                  <tr className="p-3 text-left">s/n</tr>
                   <th className="p-3 text-left">Name</th>
                   <th className="p-3 text-left">Matric Number</th>
                   <th className="p-3 text-left">Department</th>
                 </tr>
               </thead>
               <tbody>
-                {students.map((student) => (
+                {students.map((student, index) => (
                   <tr key={student.id} className="border-b hover:bg-purple-50">
+                    <td className="p-3">{index + 1}</td>
                     <td className="p-3">{student.name}</td>
                     <td className="p-3">{student.matricNo}</td>
                     <td className="p-3">{student.department}</td>
