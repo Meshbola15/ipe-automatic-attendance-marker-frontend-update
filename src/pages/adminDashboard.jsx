@@ -54,7 +54,7 @@ const AdminPage = () => {
     setDepartments(normalizedDepartments);
 
     if (normalizedDepartments.length > 0 && !selectedDepartment) {
-      setSelectedDepartment(normalizedDepartments[0]?.name);
+      setSelectedDepartment(normalizedDepartments[0]);
     }
     const data = (await loadFromDatabase(databaseKeys.ATTENDANCE)) || [];
     setAttendanceData(Array.isArray(data) ? data : []);

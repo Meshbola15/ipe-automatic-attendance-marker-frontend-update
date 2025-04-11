@@ -21,38 +21,34 @@ const CameraPage = () => {
 
   const handleNewEntry = async (newEntry) => {
     if (!newEntry) return;
-  
-    setSelectedList((prev) => {
-      const alreadyMarked = prev?.attendees?.some(
+    console.log(newEntry)
+
+    const alreadyMarked =
+      selectedList?.attendees?.some(
         (entry) => entry.matricNo === newEntry.matricNo
-      );
-  
-      if (alreadyMarked) {
-        toast.error("Entry already exists");
-        return prev; // Don’t update state
-      }
-  
-      const updatedList = {
-        ...prev,
-        attendees: [...(prev?.attendees || []), newEntry],
-      };
-  
-      // Save to DB and toast after state is set
-      saveToDatabase(databaseKeys.ATTENDANCE, updatedList)
-        .then(() => {
-          play();
-          toast.success(`${newEntry.name} has been marked Present!`);
-          getAttendanceLists()
-        })
-        .catch((error) => {
-          console.error("Failed to save attendance:", error);
-          toast.error("Failed to save attendance");
-        });
-  
-      return updatedList;
-    });
+      ) || false;
+
+    if (alreadyMarked) {
+      toast.error("Entry already exists");
+      return;
+    }
+
+    const updatedList = {
+      ...selectedList,
+      attendees: [...(selectedList?.attendees || []), newEntry],
+    };
+
+    try {
+      await saveToDatabase(databaseKeys.ATTENDANCE, updatedList);
+      setSelectedList(updatedList);
+      play()
+      getAttendanceLists()
+      toast.success(`${newEntry.name} has been marked Present!`);
+    } catch (error) {
+      console.error("Failed to save attendance:", error);
+      toast.error("Failed to save attendance");
+    }
   };
-  
 
   const getAttendanceLists = async () => {
     await loadFromDatabase(databaseKeys.ATTENDANCE).then((data) => {

@@ -84,9 +84,11 @@ const RegisterStudent = () => {
   
 
   const registerFace = async () => {
-    if (!videoRef.current) {
-      toast.error("Camera is not available.");
-      return null;
+    if (!videoRef.current || videoRef.current.readyState !== 4) {
+      setLoading(false)
+      console.log("Video not ready");
+      toast.error("Video not ready");
+      return;
     }
 
     const detections = await faceapi
