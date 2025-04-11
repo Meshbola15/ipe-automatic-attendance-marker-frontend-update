@@ -25,9 +25,7 @@ const RegisterStudent = () => {
   const [departments, setDepartments] = useState([]);
 
   useEffect(() => {
-    console.log('hi')
     loadFromDatabase(databaseKeys.DEPARTMENTS).then(data => {
-      console.log(data)
       setDepartments(data);
     })
   }, []);
@@ -37,43 +35,45 @@ const RegisterStudent = () => {
   const handleSubmit = async (values, { resetForm }) => {
     const { matricNo } = values;
     const students = await loadFromDatabase(databaseKeys.STUDENTS) || [];
-
-    if (students.length) {
-      if (students.some((student) => student.matricNo === matricNo)) {
-        toast.error("Student already exists");
-        return;
-      }
-
+  
+    // Check for duplicate matric number
+    if (students.some((student) => student.matricNo === matricNo)) {
+      toast.error("Student already exists");
+      return;
+    }
+  
+    // Capture new student's face
+    const newDescriptor = await registerFace();
+    if (!newDescriptor) return;
+  
+    // Compare new face with all stored ones
+    if (students?.length) {
       const labeledDescriptors = students.map((student) => {
         const storedArray = new Float32Array(Object.values(student.faceData));
         return new faceapi.LabeledFaceDescriptors(student.name, [storedArray]);
       });
+  
       const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
-      const registeredFaces = students.map(student => student.faceData)
-
-      for (const face of registeredFaces) {
-        const bestMatch = faceMatcher.findBestMatch(face);
-        if (bestMatch.label !== 'unknown') {
-          toast.error("Face already exists");
-          return; // Exits the entire function
-        }
+      const bestMatch = faceMatcher.findBestMatch(newDescriptor);
+  
+      if (bestMatch.label !== "unknown") {
+        toast.error("Face already registered to another student.");
+        return;
       }
     }
-
-    const newStudentFaceData = await registerFace();
-    if (!newStudentFaceData) return;
-
+  
+    // Save new student
     const newStudent = {
       ...values,
       id: uid(),
-      faceData: newStudentFaceData,
+      faceData: newDescriptor,
     };
-
-    saveToDatabase(databaseKeys.STUDENTS, newStudent);
-    play()
+  
+    await saveToDatabase(databaseKeys.STUDENTS, newStudent);
+    play();
     toast.success(`${newStudent.name} has been registered successfully!`);
     resetForm();
-  };
+  };  
 
   const registerFace = async () => {
     if (!videoRef.current) {
