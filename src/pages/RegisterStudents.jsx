@@ -20,21 +20,24 @@ const RegisterStudent = () => {
   });
 
   const [departments, setDepartments] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    loadFromDatabase(databaseKeys.DEPARTMENTS).then(data => {
+    loadFromDatabase(databaseKeys.DEPARTMENTS).then((data) => {
       setDepartments(data);
-    })
+    });
   }, []);
 
   const videoRef = useRef(null);
 
   const handleSubmit = async (values, { resetForm }) => {
+    setIsLoading(true);
     const { matricNo } = values;
-    const students = await loadFromDatabase(databaseKeys.STUDENTS) || [];
+    const students = (await loadFromDatabase(databaseKeys.STUDENTS)) || [];
 
     if (students.some((student) => student.matricNo === matricNo)) {
       toast.error("Student already exists");
+      setIsLoading(false);
       return;
     }
 
@@ -43,15 +46,16 @@ const RegisterStudent = () => {
       return new faceapi.LabeledFaceDescriptors(student.name, [storedArray]);
     });
     const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
-    const registeredFaces = students.map(student => student.faceData)
+    const registeredFaces = students.map((student) => student.faceData);
 
     for (const face of registeredFaces) {
       const bestMatch = faceMatcher.findBestMatch(face);
-      if (bestMatch.label !== 'unknown') {
+      if (bestMatch.label !== "unknown") {
         toast.error("Face already exists you fraud!");
+        setIsLoading(false);
         return; // Exits the entire function
       }
-    }    
+    }
 
     const newStudentFaceData = await registerFace();
     if (!newStudentFaceData) return;
@@ -64,6 +68,7 @@ const RegisterStudent = () => {
 
     saveToDatabase(databaseKeys.STUDENTS, newStudent);
     toast.success(`${newStudent.name} has been registered successfully!`);
+    setIsLoading(false);
     resetForm();
   };
 
@@ -157,9 +162,10 @@ const RegisterStudent = () => {
 
             <button
               type="submit"
-              className="w-full bg-purple-600 text-white p-3 rounded-lg hover:bg-purple-700"
+              className="w-full bg-purple-600 text-white p-3 rounded-lg hover:bg-purple-700 disabled:opacity-80"
+              disabled={isLoading}
             >
-              Register Student
+              {isLoading ? "Registering Face" : "Register Student"}
             </button>
           </Form>
         )}

@@ -17,7 +17,7 @@ const FaceRecognition = ({ videoRef, registerFace, recognizeFace }) => {
     const startVideo = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 640, height: 480 }
+          video: { width: 640, height: 480 },
         });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -32,7 +32,11 @@ const FaceRecognition = ({ videoRef, registerFace, recognizeFace }) => {
 
   return (
     <div className="w-full">
-      <video ref={videoRef} className="w-full h-[20rem] md:h-auto inset-0 object-cover" autoPlay></video>
+      <video
+        ref={videoRef}
+        className="w-full h-[20rem] md:h-auto inset-0 object-cover"
+        autoPlay
+      ></video>
     </div>
   );
 };

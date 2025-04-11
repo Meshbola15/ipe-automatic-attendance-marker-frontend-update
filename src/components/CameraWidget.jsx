@@ -6,7 +6,7 @@ import FaceRecognition from "./Software";
 import { useAdminContext } from "../context/adminContext";
 
 const CameraWidget = ({ registerFace, videoRef, recognizeFace }) => {
-  const [isCameraOn, setIsCameraOn] = useState(false);
+  const [isCameraOn, setIsCameraOn] = useState(true);
   const { isCameraActive } = useAdminContext();
 
   return (
@@ -44,7 +44,7 @@ const CameraWidget = ({ registerFace, videoRef, recognizeFace }) => {
           )}
         </>
       ) : (
-        <div className="aspect-video bg-gray-100 rounded-xl flex items-center justify-center">
+        <div className="aspect-[2/3] md:aspect-video bg-gray-100 rounded-xl flex items-center justify-center">
           <p className="text-gray-500">Admin has disabled the camera</p>
         </div>
       )}

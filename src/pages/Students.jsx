@@ -6,9 +6,14 @@ import { exportToCSV } from "../utils/exportCSV";
 const StudentsPage = () => {
   const [students, setStudents] = useState([]);
 
-  useEffect(() => {
-    const savedStudents = loadFromDatabase(databaseKeys.STUDENTS) || [];
+  const fetchStudents = async () => {
+    const savedStudents = (await loadFromDatabase(databaseKeys.STUDENTS)) || [];
+    console.log(savedStudents);
     setStudents(savedStudents);
+  };
+
+  useEffect(() => {
+    fetchStudents();
   }, []);
 
   const handleExportStudents = () => {
