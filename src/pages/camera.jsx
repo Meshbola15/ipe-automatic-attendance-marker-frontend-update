@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 // eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
-// import useSound from "use-sound";
-// import successSound from "../assets/sound.mp3";
+import useSound from "use-sound";
+import successSound from "../assets/sound.mp3";
 import {
   saveToDatabase,
   loadFromDatabase,
@@ -14,58 +14,53 @@ import { FaUser } from "react-icons/fa6";
 import * as faceapi from "face-api.js";
 
 const CameraPage = () => {
-  // const [play] = useSound(successSound);
+  const [play] = useSound(successSound);
   const videoRef = useRef(null);
   const [attendanceLists, setAttendanceLists] = useState([]);
   const [selectedList, setSelectedList] = useState(null);
 
-  const handleNewEntry = (newEntry) => {
-    if (!newEntry) {
-      return
-    }
-
-    let latestAttendance = selectedList;
-
-    const alreadyMarked =
-      selectedList?.attendees?.some(
-        (entry) => entry.matricNo === newEntry.matricNo
-      ) || false;
-
-    if (alreadyMarked) {
-      toast.error("Entry already exists");
-      return;
-    }
-
-    const attendees = latestAttendance?.attendees || [];
-
-    setSelectedList(async(prev) => {
-      const alreadyExists = attendees.some(
+  const handleNewEntry = async (newEntry) => {
+    if (!newEntry) return;
+  
+    setSelectedList((prev) => {
+      const alreadyMarked = prev?.attendees?.some(
         (entry) => entry.matricNo === newEntry.matricNo
       );
-
-      if (alreadyExists) return prev;
-
-      latestAttendance = {
-        ...latestAttendance,
-        attendees: [...attendees, newEntry],
+  
+      if (alreadyMarked) {
+        toast.error("Entry already exists");
+        return prev; // Don’t update state
+      }
+  
+      const updatedList = {
+        ...prev,
+        attendees: [...(prev?.attendees || []), newEntry],
       };
-
-      await saveToDatabase(databaseKeys.ATTENDANCE, latestAttendance);
-      setSelectedList(latestAttendance)
-
-      return latestAttendance
+  
+      // Save to DB and toast after state is set
+      saveToDatabase(databaseKeys.ATTENDANCE, updatedList)
+        .then(() => {
+          play();
+          toast.success(`${newEntry.name} has been marked Present!`);
+          getAttendanceLists()
+        })
+        .catch((error) => {
+          console.error("Failed to save attendance:", error);
+          toast.error("Failed to save attendance");
+        });
+  
+      return updatedList;
     });
+  };
+  
 
-    toast.success(`${newEntry.name} has been marked Present!`);
+  const getAttendanceLists = async () => {
+    await loadFromDatabase(databaseKeys.ATTENDANCE).then((data) => {
+      setAttendanceLists(data);
+    });
   };
 
   useEffect(() => {
-    const getAttendanceLists = async () => {
-      await loadFromDatabase(databaseKeys.ATTENDANCE).then((data) => {
-        setAttendanceLists(data);
-      });
-    };
-
     getAttendanceLists();
   }, []);
 

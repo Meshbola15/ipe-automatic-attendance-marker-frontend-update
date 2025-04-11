@@ -17,18 +17,16 @@ export const saveToDatabase = async (key, newData) => {
   }
 
   try {
-    console.log(newData)
     const dbRef = ref(db);
     const snapshot = await get(child(dbRef, key));
     let existingData = snapshot.exists() ? snapshot.val() : null;
-    // console.log(newData)
 
     if (Array.isArray(existingData) || ['departments', 'students', 'attendance'].includes(key)) {
       if (!existingData) {
         existingData = []
       }
 
-      const index = existingData?.findIndex((item) => item?.id === newData.id) || -1;
+      const index = existingData.findIndex((item) => item?.id === newData.id);
 
       if (index >= 0) {
         existingData[index] = newData;

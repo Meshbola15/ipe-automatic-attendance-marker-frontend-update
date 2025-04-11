@@ -11,8 +11,11 @@ import CameraWidget from "../components/CameraWidget";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { uid } from "uid";
+import useSound from "use-sound";
+import successSound from "../assets/sound.mp3";
 
 const RegisterStudent = () => {
+  const [play] = useSound(successSound);
   const validationSchema = Yup.object({
     name: Yup.string().required("Required"),
     matricNo: Yup.string().required("Required"),
@@ -22,7 +25,9 @@ const RegisterStudent = () => {
   const [departments, setDepartments] = useState([]);
 
   useEffect(() => {
+    console.log('hi')
     loadFromDatabase(databaseKeys.DEPARTMENTS).then(data => {
+      console.log(data)
       setDepartments(data);
     })
   }, []);
@@ -64,9 +69,8 @@ const RegisterStudent = () => {
       faceData: newStudentFaceData,
     };
 
-    console.log(newStudent)
-
     saveToDatabase(databaseKeys.STUDENTS, newStudent);
+    play()
     toast.success(`${newStudent.name} has been registered successfully!`);
     resetForm();
   };
