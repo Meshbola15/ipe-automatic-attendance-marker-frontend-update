@@ -35,51 +35,50 @@ const RegisterStudent = () => {
   const videoRef = useRef(null);
 
   const handleSubmit = async (values, { resetForm }) => {
-    setLoading(true);
-    try {
-      const { matricNo } = values;
-      const students = await loadFromDatabase(databaseKeys.STUDENTS) || [];
+    setLoading(true)
+    const { matricNo } = values;
+    const students = await loadFromDatabase(databaseKeys.STUDENTS) || [];
   
-      if (students.some((student) => student.matricNo === matricNo)) {
-        toast.error("Student already exists");
-        return;
-      }
+    if (students.some((student) => student.matricNo === matricNo)) {
+      toast.error("Student already exists");
+      setLoading(false)
+      return;
+    }
   
-      const newDescriptor = await registerFace();
-      if (!newDescriptor) return;
+    const newStudentFaceData = await registerFace(); // Must return a Float32Array
+    if (!newStudentFaceData) return;
   
-      if (students.length) {
-        console.log(students)
-        const labeledDescriptors = students.map((student) => {
+    if (students.length > 0) {
+      const labeledDescriptors = students
+        .filter(student => student.faceData)
+        .map((student) => {
           const storedArray = new Float32Array(Object.values(student.faceData));
           return new faceapi.LabeledFaceDescriptors(student.name, [storedArray]);
         });
   
+      if (labeledDescriptors.length > 0) {
         const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
-        const bestMatch = faceMatcher.findBestMatch(newDescriptor);
+        const bestMatch = faceMatcher.findBestMatch(newStudentFaceData);
   
-        if (bestMatch.label !== "unknown") {
-          toast.error("Face already registered to another student.");
+        if (bestMatch.label !== 'unknown') {
+          toast.error("Face already exists!");
+          setLoading(false)
           return;
         }
       }
-  
-      const newStudent = {
-        ...values,
-        id: uid(),
-        faceData: newDescriptor,
-      };
-  
-      await saveToDatabase(databaseKeys.STUDENTS, newStudent);
-      play();
-      toast.success(`${newStudent.name} has been registered successfully!`);
-      resetForm();
-    } catch (error) {
-      toast.error("An unexpected error occurred.");
-      console.error(error);
-    } finally {
-      setLoading(false);
     }
+  
+    const newStudent = {
+      ...values,
+      id: uid(),
+      faceData: newStudentFaceData,
+    };
+  
+    saveToDatabase(databaseKeys.STUDENTS, newStudent);
+    toast.success(`${newStudent.name} has been registered successfully!`);
+    play()
+    setLoading(false)
+    resetForm();
   };
   
 
@@ -101,6 +100,7 @@ const RegisterStudent = () => {
 
     return detections.descriptor;
   };
+
 
   return (
     <div className="max-w-2xl mx-auto min-h-screen mt-6">
