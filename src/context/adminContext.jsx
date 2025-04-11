@@ -37,13 +37,12 @@ const AdminContextProvider = ({ children }) => {
   };
 
   const onCameraTimeExhausted = () => {
-    console.log(hasNotified)
     if (!hasNotified) {
       toast.info("Camera time has been exhausted.");
       setHasNotified(true);
       return
     }
-    setIsCameraActive(false);
+    // setIsCameraActive(false);
   };
 
   const checkCameraTimeExhausted = async () => {
