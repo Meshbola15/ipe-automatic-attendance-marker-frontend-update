@@ -19,10 +19,15 @@ export const saveToDatabase = async (key, newData) => {
   try {
     const dbRef = ref(db);
     const snapshot = await get(child(dbRef, key));
-    const existingData = snapshot.exists() ? snapshot.val() : null;
+    let existingData = snapshot.exists() ? snapshot.val() : null;
 
-    if (Array.isArray(existingData)) {
+    if (Array.isArray(existingData) || ['departments', 'students', 'attendance'].includes(key)) {
+      if (!existingData) {
+        existingData = []
+      }
+
       const index = existingData.findIndex((item) => item?.id === newData.id);
+
       if (index >= 0) {
         existingData[index] = newData;
       } else {
@@ -40,6 +45,34 @@ export const saveToDatabase = async (key, newData) => {
     console.error("❌ Error saving to database:", error);
   }
 };
+
+
+export const removeFromDatabase = async (key, id) => {
+  if (!key || !id) {
+    console.error("❌ Missing key or id for removeFromDatabase");
+    return;
+  }
+
+  try {
+    const dbRef = ref(db);
+    const snapshot = await get(child(dbRef, key));
+    const existingData = snapshot.exists() ? snapshot.val() : [];
+    console.log(existingData)
+
+    if (!Array.isArray(existingData)) {
+      console.error("❌ Data at key is not an array, cannot perform removal.");
+      return;
+    }
+
+    const updatedData = existingData.filter(item => item?.id !== id);
+    await set(child(dbRef, key), updatedData);
+
+    console.log("✅ Data removed from", key);
+  } catch (error) {
+    console.error("❌ Error removing from database:", error);
+  }
+};
+
 
 export const loadFromDatabase = async (key, userId = null) => {
   try {
