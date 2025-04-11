@@ -39,16 +39,16 @@ const RegisterStudent = () => {
     const { matricNo } = values;
     const students = await loadFromDatabase(databaseKeys.STUDENTS) || [];
     console.log(students)
-  
+
     if (students.some((student) => student.matricNo === matricNo)) {
       toast.error("Student already exists");
       setLoading(false)
       return;
     }
-  
+
     const newStudentFaceData = await registerFace(); // Must return a Float32Array
     if (!newStudentFaceData) return;
-  
+
     if (students.length > 0) {
       const labeledDescriptors = students
         .filter(student => student.faceData)
@@ -56,11 +56,11 @@ const RegisterStudent = () => {
           const storedArray = new Float32Array(Object.values(student.faceData));
           return new faceapi.LabeledFaceDescriptors(student.name, [storedArray]);
         });
-  
+
       if (labeledDescriptors.length > 0) {
         const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.45);
         const bestMatch = faceMatcher.findBestMatch(newStudentFaceData);
-  
+
         if (bestMatch.label !== 'unknown') {
           toast.error("Face already exists!");
           setLoading(false)
@@ -68,20 +68,20 @@ const RegisterStudent = () => {
         }
       }
     }
-  
+
     const newStudent = {
       ...values,
       id: uid(),
       faceData: newStudentFaceData,
     };
-  
+
     saveToDatabase(databaseKeys.STUDENTS, newStudent);
     toast.success(`${newStudent.name} has been registered successfully!`);
     play()
     setLoading(false)
     resetForm();
   };
-  
+
 
   const registerFace = async () => {
     if (!videoRef.current || videoRef.current.readyState !== 4) {
@@ -98,6 +98,7 @@ const RegisterStudent = () => {
 
     if (!detections) {
       toast.error("No face detected. Please try again!");
+      setLoading(false)
       return null;
     }
 
