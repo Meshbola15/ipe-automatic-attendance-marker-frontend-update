@@ -54,7 +54,7 @@ const RegisterStudent = () => {
       for (const face of registeredFaces) {
         const bestMatch = faceMatcher.findBestMatch(face);
         if (bestMatch.label !== 'unknown') {
-          toast.error("Face already exists you fraud!");
+          toast.error("Face already exists");
           return; // Exits the entire function
         }
       }
