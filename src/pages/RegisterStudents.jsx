@@ -13,6 +13,7 @@ import { toast } from "react-toastify";
 import { uid } from "uid";
 import useSound from "use-sound";
 import successSound from "../assets/sound.mp3";
+import LoadingScreen from "../components/loadingScreen";
 
 const RegisterStudent = () => {
   const [play] = useSound(successSound);
@@ -23,6 +24,7 @@ const RegisterStudent = () => {
   });
 
   const [departments, setDepartments] = useState([]);
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     loadFromDatabase(databaseKeys.DEPARTMENTS).then(data => {
@@ -33,47 +35,53 @@ const RegisterStudent = () => {
   const videoRef = useRef(null);
 
   const handleSubmit = async (values, { resetForm }) => {
-    const { matricNo } = values;
-    const students = await loadFromDatabase(databaseKeys.STUDENTS) || [];
+    setLoading(true);
+    try {
+      const { matricNo } = values;
+      const students = await loadFromDatabase(databaseKeys.STUDENTS) || [];
   
-    // Check for duplicate matric number
-    if (students.some((student) => student.matricNo === matricNo)) {
-      toast.error("Student already exists");
-      return;
-    }
-  
-    // Capture new student's face
-    const newDescriptor = await registerFace();
-    if (!newDescriptor) return;
-  
-    // Compare new face with all stored ones
-    if (students?.length) {
-      const labeledDescriptors = students.map((student) => {
-        const storedArray = new Float32Array(Object.values(student.faceData));
-        return new faceapi.LabeledFaceDescriptors(student.name, [storedArray]);
-      });
-  
-      const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
-      const bestMatch = faceMatcher.findBestMatch(newDescriptor);
-  
-      if (bestMatch.label !== "unknown") {
-        toast.error("Face already registered to another student.");
+      if (students.some((student) => student.matricNo === matricNo)) {
+        toast.error("Student already exists");
         return;
       }
+  
+      const newDescriptor = await registerFace();
+      if (!newDescriptor) return;
+  
+      if (students.length) {
+        console.log(students)
+        const labeledDescriptors = students.map((student) => {
+          const storedArray = new Float32Array(Object.values(student.faceData));
+          return new faceapi.LabeledFaceDescriptors(student.name, [storedArray]);
+        });
+  
+        const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
+        const bestMatch = faceMatcher.findBestMatch(newDescriptor);
+  
+        if (bestMatch.label !== "unknown") {
+          toast.error("Face already registered to another student.");
+          return;
+        }
+      }
+  
+      const newStudent = {
+        ...values,
+        id: uid(),
+        faceData: newDescriptor,
+      };
+  
+      await saveToDatabase(databaseKeys.STUDENTS, newStudent);
+      play();
+      toast.success(`${newStudent.name} has been registered successfully!`);
+      resetForm();
+    } catch (error) {
+      toast.error("An unexpected error occurred.");
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
+  };
   
-    // Save new student
-    const newStudent = {
-      ...values,
-      id: uid(),
-      faceData: newDescriptor,
-    };
-  
-    await saveToDatabase(databaseKeys.STUDENTS, newStudent);
-    play();
-    toast.success(`${newStudent.name} has been registered successfully!`);
-    resetForm();
-  };  
 
   const registerFace = async () => {
     if (!videoRef.current) {
@@ -96,6 +104,7 @@ const RegisterStudent = () => {
 
   return (
     <div className="max-w-2xl mx-auto min-h-screen mt-6">
+      {loading && <LoadingScreen />}
       <h1 className="text-2xl font-bold text-purple-600 mb-6">
         Student Registration
       </h1>

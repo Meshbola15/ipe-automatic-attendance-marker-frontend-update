@@ -23,6 +23,7 @@ const CameraWidget = ({ registerFace, videoRef, recognizeFace }) => {
             </h2>
             <button
               onClick={() => setIsCameraOn(!isCameraOn)}
+              type="button"
               className="bg-purple-100 p-2 rounded-lg hover:bg-purple-200"
             >
               {isCameraOn ? <FiCameraOff size={24} /> : <FiCamera size={24} />}
