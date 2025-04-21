@@ -8,7 +8,9 @@ const StudentsPage = () => {
   const [department, setDepartment] = useState([])
 
   const fetchStudents = async () => {
-    const savedStudents = (await loadFromDatabase(databaseKeys.STUDENTS)) || [];
+    const savedStudents = await loadFromDatabase(databaseKeys.STUDENTS) || [];
+    const sortedStudents = savedStudents.sort((student, comparison) => student?.matricNo?.split('/')[student?.matricNo?.split('/')?.length - 1] - comparison?.matricNo?.split('/')[comparison?.matricNo?.split('/')?.length - 1])
+    console.log(sortedStudents)
     console.log(savedStudents);
     setStudents(savedStudents);
   };
