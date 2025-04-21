@@ -36,7 +36,7 @@ const RegisterStudent = () => {
 
   const handleSubmit = async (values, { resetForm }) => {
     setLoading(true)
-    const { matricNo } = values;
+    const { matricNo, department } = values;
     const students = await loadFromDatabase(databaseKeys.STUDENTS) || [];
     console.log(students)
 
@@ -51,11 +51,12 @@ const RegisterStudent = () => {
 
     if (students.length > 0) {
       const labeledDescriptors = students
-        .filter(student => student.faceData)
-        .map((student) => {
+        .filter(student => department === student.department) // this returns a boolean
+        .map(student => {
           const storedArray = new Float32Array(Object.values(student.faceData));
           return new faceapi.LabeledFaceDescriptors(student.name, [storedArray]);
         });
+
 
       if (labeledDescriptors.length > 0) {
         const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.44);
