@@ -94,7 +94,7 @@ const CameraPage = () => {
     // Convert stored students' face data into LabeledFaceDescriptors
     const labeledDescriptors = students.map((student) => {
       const storedArray = new Float32Array(Object.values(student.faceData));
-      return new faceapi.LabeledFaceDescriptors(student.name, [storedArray]);
+      return new faceapi.LabeledFaceDescriptors(student?.name, [storedArray]);
     });
 
     const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
@@ -102,15 +102,16 @@ const CameraPage = () => {
     detections.forEach((detection) => {
       const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
 
+      console.log(students)
       if (bestMatch.label !== "unknown") {
         const matchedStudent = students.find(
-          (student) => student.name === bestMatch.label
+          (student) => student?.name === bestMatch.label
         );
 
         if (matchedStudent) {
           const newEntry = {
             id: Date.now(),
-            name: matchedStudent.name,
+            name: matchedStudent?.name,
             matricNo: matchedStudent.matricNo,
             time: new Date().toLocaleTimeString(),
             date: new Date().toLocaleDateString(),
@@ -120,7 +121,7 @@ const CameraPage = () => {
           handleNewEntry(newEntry);
         }
       } else {
-        console.log("Face detected but no match found.");
+        toast.error("Face detected but no match found.");
       }
     });
   };
@@ -133,7 +134,7 @@ const CameraPage = () => {
       recognizeFace();
       intervalRef.current = setInterval(() => {
         recognizeFace();
-      }, 10000);
+      }, 5000);
       setActiveDetection(true);
     } else {
       clearInterval(intervalRef.current);
