@@ -9,9 +9,7 @@ const StudentsPage = () => {
 
   const fetchStudents = async () => {
     const savedStudents = await loadFromDatabase(databaseKeys.STUDENTS) || [];
-    const sortedStudents = savedStudents.sort((student, comparison) => student?.matricNo?.split('/')[student?.matricNo?.split('/')?.length - 1] - comparison?.matricNo?.split('/')[comparison?.matricNo?.split('/')?.length - 1])
-    console.log(sortedStudents)
-    console.log(savedStudents);
+    savedStudents.sort((student, comparison) => student?.matricNo?.split('/')[student?.matricNo?.split('/')?.length - 1] - comparison?.matricNo?.split('/')[comparison?.matricNo?.split('/')?.length - 1])
     setStudents(savedStudents);
   };
 
@@ -22,12 +20,6 @@ const StudentsPage = () => {
   const handleExportStudents = () => {
     exportToCSV(students, "students.csv");
   };
-
-  // setDepartment(await loadFromDatabase(databaseKeys.DEPARTMENTS))
-
-  // const sectionTitle = students.filter((students)=>department.map((_department, index)=>(
-  //   _department === students.department
-  // )))
 
   return (
     <div className="min-h-screen bg-purple-50 mt-8 p-4 md:p-8">
@@ -40,7 +32,7 @@ const StudentsPage = () => {
             <table className="w-full bg-white rounded-xl shadow-lg">
               <thead className="bg-purple-50">
                 <tr>
-                  <tr className="p-3 text-left">s/n</tr>
+                  <th className="p-3 text-left">s/n</th>
                   <th className="p-3 text-left">Name</th>
                   <th className="p-3 text-left">Matric Number</th>
                   <th className="p-3 text-left">Department</th>
