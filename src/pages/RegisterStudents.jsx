@@ -59,7 +59,7 @@ const RegisterStudent = () => {
 
 
       if (labeledDescriptors.length > 0) {
-        const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.40);
+        const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.35);
         const bestMatch = faceMatcher.findBestMatch(newStudentFaceData);
 
         if (bestMatch.label !== 'unknown') {
