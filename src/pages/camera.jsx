@@ -97,7 +97,7 @@ const CameraPage = () => {
       return new faceapi.LabeledFaceDescriptors(student?.name, [storedArray]);
     });
 
-    const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
+    const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.5);
 
     detections.forEach((detection) => {
       const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
