@@ -12,18 +12,20 @@ import {
 import AttendanceManagement from "../components/attendanceManagement";
 import NewAttendanceModal from "../components/newAttendanceModal";
 import LoadingScreen from "../components/loadingScreen";
-import { FiPlus, FiArrowLeft, FiLogOut } from "react-icons/fi";
+import { FiPlus, FiArrowLeft, FiLogOut, FiPlusCircle, FiClock } from "react-icons/fi";
 
 const LecturerDashboard = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { lecturerDetails, loading } = useLecturerContext();
+  const { lecturerDetails, setLecturerDetails, loading } = useLecturerContext();
 
   const [departments, setDepartments] = useState([]);
   const [attendanceData, setAttendanceData] = useState([]);
   const [openAttendance, setOpenAttendance] = useState({});
   const [showNewAttendanceModal, setShowNewAttendanceModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [requestingDept, setRequestingDept] = useState("");
+  const [submittingRequest, setSubmittingRequest] = useState(false);
   const [sessionDuration, setSessionDuration] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("");
   const [selectedLevel, setSelectedLevel] = useState("");
@@ -34,6 +36,12 @@ const LecturerDashboard = () => {
     setDepartments(Array.isArray(depts) ? depts : []);
     const data = (await loadFromDatabase(databaseKeys.ATTENDANCE)) || [];
     setAttendanceData(Array.isArray(data) ? data : []);
+    const allLecturers = (await loadFromDatabase(databaseKeys.LECTURERS)) || [];
+    const me = (Array.isArray(allLecturers) ? allLecturers : Object.values(allLecturers)).find((l) => l.id === id);
+    if (me) {
+      setLecturerDetails(me);
+      localStorage.setItem("lecturer", JSON.stringify(me));
+    }
   };
 
   useEffect(() => {
@@ -128,6 +136,25 @@ const LecturerDashboard = () => {
     setOpenAttendance((prev) => ({ ...prev, [fileName]: !prev[fileName] }));
   };
 
+  const handleDeptRequest = async () => {
+    if (!requestingDept) return;
+    const raw = await loadFromDatabase(databaseKeys.LECTURERS);
+    const all = Array.isArray(raw) ? raw : Object.values(raw || {});
+    const me = all.find((l) => l.id === id);
+    if (!me) return;
+    const existing = (me.deptRequests || []);
+    if (existing.some((r) => r.dept === requestingDept && r.status === "pending")) {
+      toast.error("You already have a pending request for this department");
+      return;
+    }
+    setSubmittingRequest(true);
+    const updated = { ...me, deptRequests: [...existing, { dept: requestingDept, status: "pending" }] };
+    await saveToDatabase(databaseKeys.LECTURERS, updated);
+    toast.success("Request submitted — awaiting admin approval");
+    setRequestingDept("");
+    setSubmittingRequest(false);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("lecturer");
     localStorage.removeItem("lecturer_remembered");
@@ -167,10 +194,10 @@ const LecturerDashboard = () => {
 
       {/* Dept scope info */}
       <div className="card !p-4">
-        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Your Departments</p>
-        <div className="flex flex-wrap gap-2">
+        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Your Departments</p>
+        <div className="flex flex-wrap gap-2 mb-4">
           {myDepts.length === 0 ? (
-            <p className="text-sm text-slate-400">No departments assigned</p>
+            <p className="text-sm text-slate-400">No departments assigned yet</p>
           ) : (
             myDepts.map((d) => (
               <div key={d.id} className="bg-violet-50 border border-violet-100 rounded-xl px-3 py-2">
@@ -180,6 +207,49 @@ const LecturerDashboard = () => {
             ))
           )}
         </div>
+
+        {/* Pending requests */}
+        {(lecturerDetails?.deptRequests || []).filter((r) => r.status === "pending").length > 0 && (
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Pending Requests</p>
+            <div className="flex flex-wrap gap-2">
+              {(lecturerDetails?.deptRequests || []).filter((r) => r.status === "pending").map((r) => (
+                <span key={r.dept} className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                  <FiClock size={11} /> {r.dept} — pending
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Request additional dept */}
+        {(() => {
+          const assignedNames = (lecturerDetails?.departments || []);
+          const pendingNames = (lecturerDetails?.deptRequests || []).filter((r) => r.status === "pending").map((r) => r.dept);
+          const available = departments.filter((d) => !assignedNames.includes(d.name) && !pendingNames.includes(d.name));
+          if (available.length === 0) return null;
+          return (
+            <div className="flex gap-2 items-center pt-3 border-t border-slate-100">
+              <select
+                value={requestingDept}
+                onChange={(e) => setRequestingDept(e.target.value)}
+                className="input flex-1 text-sm"
+              >
+                <option value="">Request access to another department…</option>
+                {available.map((d) => (
+                  <option key={d.id} value={d.name}>{d.name}</option>
+                ))}
+              </select>
+              <button
+                onClick={handleDeptRequest}
+                disabled={!requestingDept || submittingRequest}
+                className="btn-primary flex items-center gap-1.5 !py-2 flex-shrink-0"
+              >
+                <FiPlusCircle size={14} /> Request
+              </button>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Session Management */}

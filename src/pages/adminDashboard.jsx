@@ -6,7 +6,7 @@ import {
   removeFromDatabase,
   saveToDatabase,
 } from "../utils/database";
-import { FiPlus, FiArrowLeft, FiLogOut } from "react-icons/fi";
+import { FiPlus, FiArrowLeft, FiLogOut, FiEdit2, FiCheck, FiX } from "react-icons/fi";
 import { toast } from "react-toastify";
 import { useAdminContext } from "../context/adminContext";
 import { useNavigate, useParams } from "react-router-dom";
@@ -78,9 +78,42 @@ const AdminPage = () => {
     fetchData();
   };
 
+  const handleRenameDepartment = async (dept, newName) => {
+    if (!newName.trim() || newName.trim() === dept.name) return;
+    if (departments.some((d) => d.id !== dept.id && d.name.toLowerCase() === newName.trim().toLowerCase())) {
+      toast.error("A department with that name already exists");
+      return;
+    }
+    const updated = { ...dept, name: newName.trim() };
+    await saveToDatabase(databaseKeys.DEPARTMENTS, updated);
+    toast.success("Department renamed");
+    fetchData();
+  };
+
   const handleRemoveLevelFromDept = async (dept, lvl) => {
     const updated = { ...dept, levels: (dept.levels || []).filter((l) => l !== lvl) };
     await saveToDatabase(databaseKeys.DEPARTMENTS, updated);
+    fetchData();
+  };
+
+  const handleApproveDeptRequest = async (lecturer, deptName) => {
+    const updatedRequests = (lecturer.deptRequests || []).map((r) =>
+      r.dept === deptName ? { ...r, status: "approved" } : r
+    );
+    const updatedDepts = [...new Set([...(lecturer.departments || []), deptName])];
+    const updated = { ...lecturer, departments: updatedDepts, deptRequests: updatedRequests };
+    await saveToDatabase(databaseKeys.LECTURERS, updated);
+    toast.success(`${lecturer.username} granted access to ${deptName}`);
+    fetchData();
+  };
+
+  const handleRejectDeptRequest = async (lecturer, deptName) => {
+    const updatedRequests = (lecturer.deptRequests || []).map((r) =>
+      r.dept === deptName ? { ...r, status: "rejected" } : r
+    );
+    const updated = { ...lecturer, deptRequests: updatedRequests };
+    await saveToDatabase(databaseKeys.LECTURERS, updated);
+    toast.success(`Request rejected`);
     fetchData();
   };
 
@@ -227,12 +260,42 @@ const AdminPage = () => {
           ) : (
             <div className="space-y-3">
               {departments.map((dept) => (
-                <DeptCard key={dept.id} dept={dept} onRemoveDept={handleRemoveDepartment} onAddLevel={handleAddLevelToDept} onRemoveLevel={handleRemoveLevelFromDept} setConfirm={setConfirm} />
+                <DeptCard key={dept.id} dept={dept} onRemoveDept={handleRemoveDepartment} onRenameDept={handleRenameDepartment} onAddLevel={handleAddLevelToDept} onRemoveLevel={handleRemoveLevelFromDept} setConfirm={setConfirm} />
               ))}
             </div>
           )}
         </div>
       </section>
+
+      {/* Department Access Requests */}
+      {(() => {
+        const pending = lecturers.flatMap((l) =>
+          (l.deptRequests || []).filter((r) => r.status === "pending").map((r) => ({ lecturer: l, dept: r.dept }))
+        );
+        if (pending.length === 0) return null;
+        return (
+          <section className="card">
+            <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+              Department Access Requests
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold">{pending.length}</span>
+            </h2>
+            <div className="space-y-2">
+              {pending.map(({ lecturer: lec, dept }) => (
+                <div key={`${lec.id}-${dept}`} className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800">{lec.username}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Requesting access to <span className="font-semibold text-violet-600">{dept}</span></p>
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button onClick={() => handleApproveDeptRequest(lec, dept)} className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors">Approve</button>
+                    <button onClick={() => handleRejectDeptRequest(lec, dept)} className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors">Reject</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      })()}
 
       {/* Lecturer Applications */}
       <section className="card">
@@ -310,20 +373,51 @@ const AdminPage = () => {
 };
 
 // Sub-component: expandable department card with inline level management
-const DeptCard = ({ dept, onRemoveDept, onAddLevel, onRemoveLevel, setConfirm }) => {
+const DeptCard = ({ dept, onRemoveDept, onRenameDept, onAddLevel, onRemoveLevel, setConfirm }) => {
   const [expanded, setExpanded] = useState(false);
   const [newLvl, setNewLvl] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState(dept.name);
+
+  const commitRename = () => {
+    onRenameDept(dept, editName);
+    setEditing(false);
+  };
+  const cancelRename = () => {
+    setEditName(dept.name);
+    setEditing(false);
+  };
+
   return (
     <div className="border border-slate-100 rounded-xl overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-slate-50" onClick={() => setExpanded((p) => !p)}>
-        <div className="flex items-center gap-2.5">
-          <div className="w-2 h-2 rounded-full bg-violet-400" />
-          <span className="text-sm font-semibold text-slate-700">{dept.name}</span>
-          <span className="text-xs text-slate-400">{(dept.levels || []).length} level{(dept.levels || []).length !== 1 ? "s" : ""}</span>
+      <div className="flex items-center justify-between px-4 py-3 hover:bg-slate-50">
+        <div className="flex items-center gap-2.5 flex-1 min-w-0" onClick={() => !editing && setExpanded((p) => !p)} style={{ cursor: editing ? "default" : "pointer" }}>
+          <div className="w-2 h-2 rounded-full bg-violet-400 flex-shrink-0" />
+          {editing ? (
+            <input
+              autoFocus
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") cancelRename(); }}
+              onClick={(e) => e.stopPropagation()}
+              className="input !py-1 !px-2 text-sm font-semibold flex-1 min-w-0"
+            />
+          ) : (
+            <span className="text-sm font-semibold text-slate-700 truncate">{dept.name}</span>
+          )}
+          {!editing && <span className="text-xs text-slate-400 flex-shrink-0">{(dept.levels || []).length} level{(dept.levels || []).length !== 1 ? "s" : ""}</span>}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+          {editing ? (
+            <>
+              <button onClick={commitRename} className="w-7 h-7 flex items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors" title="Save"><FiCheck size={13} /></button>
+              <button onClick={cancelRename} className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors" title="Cancel"><FiX size={13} /></button>
+            </>
+          ) : (
+            <button onClick={(e) => { e.stopPropagation(); setEditing(true); }} className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-violet-600 hover:bg-violet-50 transition-colors" title="Rename"><FiEdit2 size={13} /></button>
+          )}
           <button onClick={(e) => { e.stopPropagation(); onRemoveDept(dept.id); }} className="text-xs text-red-500 hover:text-red-700 font-medium hover:bg-red-50 px-2 py-1 rounded-lg transition-colors">Remove</button>
-          <span className="text-slate-400 text-xs">{expanded ? "▲" : "▼"}</span>
+          {!editing && <span className="text-slate-400 text-xs cursor-pointer" onClick={() => setExpanded((p) => !p)}>{expanded ? "▲" : "▼"}</span>}
         </div>
       </div>
       {expanded && (
