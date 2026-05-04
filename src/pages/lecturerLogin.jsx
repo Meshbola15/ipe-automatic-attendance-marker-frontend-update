@@ -19,8 +19,15 @@ const LecturerLogin = () => {
   useEffect(() => {
     const saved = localStorage.getItem("lecturer_remembered");
     if (saved) {
-      setUsername(JSON.parse(saved).username);
+      const { username: savedUsername } = JSON.parse(saved);
+      setUsername(savedUsername);
       setRememberMe(true);
+      const storedLecturer = localStorage.getItem("lecturer");
+      if (storedLecturer) {
+        const lecturer = JSON.parse(storedLecturer);
+        setLecturerDetails(lecturer);
+        navigate(`/lecturer/dashboard/${lecturer.id}`, { replace: true });
+      }
     }
   }, []);
 

@@ -15,8 +15,13 @@ const StudentLogin = () => {
   useEffect(() => {
     const saved = localStorage.getItem("student_remembered");
     if (saved) {
-      setMatricNo(JSON.parse(saved).matricNo);
+      const { matricNo: savedMatric, student: savedStudent } = JSON.parse(saved);
+      setMatricNo(savedMatric);
       setRememberMe(true);
+      if (savedStudent) {
+        sessionStorage.setItem("student", JSON.stringify(savedStudent));
+        navigate(`/student/dashboard/${encodeURIComponent(savedMatric)}`, { replace: true });
+      }
     }
   }, []);
 
@@ -37,7 +42,7 @@ const StudentLogin = () => {
       }
 
       if (rememberMe) {
-        localStorage.setItem("student_remembered", JSON.stringify({ matricNo: student.matricNo }));
+        localStorage.setItem("student_remembered", JSON.stringify({ matricNo: student.matricNo, student }));
       } else {
         localStorage.removeItem("student_remembered");
       }

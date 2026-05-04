@@ -122,6 +122,7 @@ const StudentDashboard = () => {
 
   const handleLogout = () => {
     sessionStorage.removeItem("student");
+    localStorage.removeItem("student_remembered");
     navigate("/login");
   };
 

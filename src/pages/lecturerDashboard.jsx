@@ -130,6 +130,7 @@ const LecturerDashboard = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("lecturer");
+    localStorage.removeItem("lecturer_remembered");
     navigate("/lecturer");
   };
 
