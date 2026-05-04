@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useParams } from "react-router-dom";
 // eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
 import useSound from "use-sound";
@@ -14,46 +15,49 @@ import { FaUser } from "react-icons/fa6";
 import * as faceapi from "face-api.js";
 
 const CameraPage = () => {
+  const { id: lecturerId } = useParams();
   const [play] = useSound(successSound);
   const videoRef = useRef(null);
-  const [attendanceLists, setAttendanceLists] = useState([]);
+  const [allAttendanceLists, setAllAttendanceLists] = useState([]);
   const [selectedList, setSelectedList] = useState(null);
 
-  const handleNewEntry = async (newEntry) => {
-    if (!newEntry) return;
-    console.log(newEntry)
+  // Only show this lecturer's sessions on the camera page
+  const attendanceLists = allAttendanceLists.filter((s) => s.lecturerId === lecturerId);
 
-    const alreadyMarked =
-      selectedList?.attendees?.some(
-        (entry) => entry.matricNo === newEntry.matricNo
-      ) || false;
+  const handleVerifyEntry = async (freshSession, matchedStudent) => {
+    if (!freshSession || !matchedStudent) return;
 
-    if (alreadyMarked) {
-      toast.error("Entry already exists");
-      return;
-    }
+    const existingEntry = freshSession.attendees?.find(
+      (a) => a.matricNo === matchedStudent.matricNo
+    );
 
-    const updatedList = {
-      ...selectedList,
-      attendees: [...(selectedList?.attendees || []), newEntry],
-    };
+    // Already verified — skip
+    if (existingEntry?.verifiedByAI) return;
+
+    const now = new Date();
+    const updatedAttendees = (freshSession.attendees || []).map((a) =>
+      a.matricNo === matchedStudent.matricNo
+        ? { ...a, status: "Present", verifiedByAI: true, verifiedAt: now.toLocaleTimeString() }
+        : a
+    );
+
+    const updatedList = { ...freshSession, attendees: updatedAttendees };
 
     try {
       await saveToDatabase(databaseKeys.ATTENDANCE, updatedList);
       setSelectedList(updatedList);
-      play()
-      getAttendanceLists()
-      toast.success(`${newEntry.name} has been marked Present!`);
+      play();
+      getAttendanceLists();
+      toast.success(`${matchedStudent.name} verified as Present!`);
     } catch (error) {
-      console.error("Failed to save attendance:", error);
-      toast.error("Failed to save attendance");
+      console.error("Failed to verify attendance:", error);
+      toast.error("Failed to save verification");
     }
   };
 
   const getAttendanceLists = async () => {
-    await loadFromDatabase(databaseKeys.ATTENDANCE).then((data) => {
-      setAttendanceLists(data);
-    });
+    const data = await loadFromDatabase(databaseKeys.ATTENDANCE);
+    setAllAttendanceLists(Array.isArray(data) ? data : []);
   };
 
   useEffect(() => {
@@ -66,9 +70,34 @@ const CameraPage = () => {
       return;
     }
 
-    const students = (await loadFromDatabase(databaseKeys.STUDENTS)) || [];
-    if (!students || !students?.length) {
-      alert("No registered face found.");
+    const allStudents = (await loadFromDatabase(databaseKeys.STUDENTS)) || [];
+    if (!allStudents.length) {
+      toast.error("No registered students found.");
+      return;
+    }
+
+    // Get the latest session state from DB
+    const freshSessions = (await loadFromDatabase(databaseKeys.ATTENDANCE)) || [];
+    const freshSession = (Array.isArray(freshSessions) ? freshSessions : []).find(
+      (s) => s.id === selectedList?.id
+    );
+    if (!freshSession) return;
+
+    // Only match Pending self-check-ins for this session's department
+    const pendingMatricNos = new Set(
+      (freshSession.attendees || [])
+        .filter((a) => a.status === "Pending")
+        .map((a) => a.matricNo)
+    );
+
+    const candidateStudents = allStudents.filter(
+      (s) =>
+        s.department === freshSession.department &&
+        pendingMatricNos.has(s.matricNo)
+    );
+
+    if (!candidateStudents.length) {
+      toast.info("No pending self-check-ins to verify in this session.");
       return;
     }
 
@@ -77,11 +106,10 @@ const CameraPage = () => {
       scoreThreshold: 0.4,
     });
 
-    // **Detect Multiple Faces**
     const detections = await faceapi
       .detectAllFaces(videoRef.current, options)
       .withFaceLandmarks()
-      .withFaceDescriptors(); // This will detect multiple faces
+      .withFaceDescriptors();
 
     if (!detections || detections.length === 0) {
       console.log("No face detected.");
@@ -89,12 +117,11 @@ const CameraPage = () => {
       return;
     }
 
-    console.log(`Detected ${detections.length} faces`);
+    console.log(`Detected ${detections.length} face(s), checking against ${candidateStudents.length} pending student(s)`);
 
-    // Convert stored students' face data into LabeledFaceDescriptors
-    const labeledDescriptors = students.map((student) => {
+    const labeledDescriptors = candidateStudents.map((student) => {
       const storedArray = new Float32Array(Object.values(student.faceData));
-      return new faceapi.LabeledFaceDescriptors(student?.name, [storedArray]);
+      return new faceapi.LabeledFaceDescriptors(student.name, [storedArray]);
     });
 
     const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.5);
@@ -102,150 +129,172 @@ const CameraPage = () => {
     detections.forEach((detection) => {
       const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
 
-      console.log(students)
       if (bestMatch.label !== "unknown") {
-        const matchedStudent = students.find(
-          (student) => student?.name === bestMatch.label
+        const matchedStudent = candidateStudents.find(
+          (s) => s.name === bestMatch.label
         );
 
         if (matchedStudent) {
-          const newEntry = {
-            id: Date.now(),
-            name: matchedStudent?.name,
-            matricNo: matchedStudent.matricNo,
-            time: new Date().toLocaleTimeString(),
-            date: new Date().toLocaleDateString(),
-            status: "Present",
-          };
-
-          handleNewEntry(newEntry);
+          // Upgrade Pending → Present
+          handleVerifyEntry(freshSession, matchedStudent);
         }
-      } else {
-        toast.error("Face detected but no match found.");
       }
     });
   };
 
-  const [activeDetection, setActiveDetection] = useState(false);
   const intervalRef = useRef(null);
 
-  const handleDetection = () => {
-    if (!activeDetection) {
+  useEffect(() => {
+    if (selectedList) {
       recognizeFace();
-      intervalRef.current = setInterval(() => {
-        recognizeFace();
-      }, 5000);
-      setActiveDetection(true);
+      intervalRef.current = setInterval(recognizeFace, 5000);
     } else {
       clearInterval(intervalRef.current);
-      intervalRef.current = null; // Reset ref after clearing interval
-      setActiveDetection(false);
+      intervalRef.current = null;
     }
-  };
+    return () => {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    };
+  }, [selectedList?.id]);
 
   return (
-    <div className="w-full mt-8">
+    <div className="w-full">
       {selectedList ? (
-        <div className="min-h-screen bg-purple-50 p-4 py-6 md:p-8 flex flex-col items-center">
-          {/* Camera Widget */}
-          <div className="w-full max-w-3xl" ref={videoRef}>
-            <CameraWidget recognizeFace={recognizeFace} videoRef={videoRef} />
+        <>
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+            <div>
+              <h1 className="page-title">Camera — Attendance Scanner</h1>
+              <p className="page-subtitle !mb-0">
+                Session: <span className="font-semibold text-violet-600">{selectedList?.fileName}</span>
+              </p>
+            </div>
+            <button
+              onClick={() => setSelectedList(null)}
+              className="btn-secondary self-start sm:self-auto"
+            >
+              Change Session
+            </button>
           </div>
 
-          {/* Recent Entries Section */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="w-full max-w-3xl bg-white rounded-2xl shadow-lg p-6 mt-6"
-          >
-            <h2 className="text-purple-600 text-xl font-bold mb-4 text-center">
-              Recent Entries ({selectedList?.fileName})
-            </h2>
-            <div className="space-y-4">
-              {selectedList?.attendees?.length > 0 ? (
-                selectedList?.attendees?.map((entry, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="flex justify-between items-center bg-purple-100 p-3 rounded-lg shadow-sm"
-                  >
-                    <span className="font-medium text-purple-700">
-                      {entry?.name}
-                    </span>
-                    <span className="text-gray-600 text-sm">
-                      {entry?.matricNo}
-                    </span>
-                    <span className="text-gray-500 text-sm">{entry?.time}</span>
-                  </motion.div>
-                ))
-              ) : (
-                <div className="text-center text-gray-500 py-6">
-                  No recent entries detected yet
-                </div>
-              )}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+            {/* Camera widget */}
+            <div className="lg:col-span-3" ref={videoRef}>
+              <CameraWidget recognizeFace={recognizeFace} videoRef={videoRef} />
+
+              {/* Detection active indicator */}
+              <div className="mt-3 flex items-center gap-2 px-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs font-medium text-emerald-600">Detection active</span>
+              </div>
             </div>
-          </motion.div>
 
-          {/* Simulate Detection Button */}
+            {/* Live entries panel */}
+            <div className="lg:col-span-2">
+              <div className="card h-full flex flex-col">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-sm font-bold text-slate-800">Live Entries</h2>
+                  <span className="text-xs font-semibold bg-violet-50 text-violet-700 border border-violet-100 px-2.5 py-0.5 rounded-full">
+                    {selectedList?.attendees?.length ?? 0} marked
+                  </span>
+                </div>
 
-          <div className="flex flex-col flex-grow justify-center mt-[4rem] items-center gap-4">
-            <h3 className="text-lg font-semibold">Select Attendance List</h3>
-            <div className="p-2 border-2 flex flex-col gap-4 rounded-md border-purple-600">
+                <div className="flex-1 overflow-y-auto max-h-[480px] space-y-2 pr-1">
+                  {selectedList?.attendees?.length > 0 ? (
+                    [...(selectedList.attendees)].reverse().map((entry, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border ${
+                          entry.status === "Present"
+                            ? "bg-emerald-50 border-emerald-100"
+                            : "bg-amber-50 border-amber-100"
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 ${
+                          entry.status === "Present" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                        }`}>
+                          {entry?.name?.charAt(0)?.toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-slate-800 truncate">{entry?.name}</p>
+                          <p className="text-xs text-slate-500">{entry?.matricNo}</p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <span className={entry.status === "Present" ? "badge-present" : "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200"}>
+                            {entry.status === "Present" ? "✓ Verified" : "Pending"}
+                          </span>
+                          <p className="text-[10px] text-slate-400 mt-0.5">{entry?.checkInTime || entry?.time}</p>
+                        </div>
+                      </motion.div>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-32 text-slate-400">
+                      <p className="text-sm">No check-ins yet</p>
+                      <p className="text-xs mt-1">Students must self-check in first</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Session switcher */}
+          <div className="mt-8">
+            <h3 className="text-sm font-semibold text-slate-600 mb-3">Switch Session</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {attendanceLists.map((list, index) => (
                 <div
-                  onClick={() => {
-                    setSelectedList(list);
-                    // scroller.scrollTo('dashboard', {
-                    //   smooth: true,
-                    //   offset: -100
-                    // })
-                  }}
                   key={index}
-                  className="w-full p-4 bg-gray-100 rounded-md cursor-pointer flex gap-8 font-medium justify-between"
+                  onClick={() => setSelectedList(list)}
+                  className={`px-4 py-3 rounded-xl border cursor-pointer transition-all ${
+                    selectedList?.id === list.id
+                      ? "border-violet-400 bg-violet-50"
+                      : "border-slate-100 bg-white hover:border-violet-200"
+                  }`}
                 >
-                  <p>{list?.fileName}</p>
-                  <p className="flex items-center gap-2">
-                    {list?.attendees?.length}{" "}
-                    <FaUser className="text-purple-600" />
+                  <p className="text-sm font-semibold text-slate-800 truncate">{list?.fileName}</p>
+                  <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+                    <FaUser size={10} className="text-violet-400" />
+                    {list?.attendees?.length ?? 0} attendees
                   </p>
                 </div>
               ))}
             </div>
           </div>
-          <button
-            onClick={handleDetection}
-            className="fixed bottom-6 right-6 bg-purple-600 text-white p-4 rounded-full shadow-lg hover:bg-purple-700 transition-colors focus:outline-none"
-          >
-            {activeDetection ? "End Detection" : "Begin Detection"}
-          </button>
-        </div>
+        </>
       ) : (
-        <div className="flex flex-col flex-grow justify-center items-center gap-4">
-          <h3 className="text-lg font-semibold">Select Attendance List</h3>
-          {!attendanceLists || attendanceLists?.length === 0 ? (
-            <div>Login as admin to create a list</div>
+        <div>
+          <div className="mb-6">
+            <h1 className="page-title">Camera — Attendance Scanner</h1>
+            <p className="page-subtitle">Select an attendance session to begin marking</p>
+          </div>
+
+          {!attendanceLists || attendanceLists.length === 0 ? (
+            <div className="card flex flex-col items-center justify-center py-16 text-slate-400">
+              <FaUser size={36} className="mb-4 opacity-30" />
+              <p className="text-base font-medium text-slate-600">No sessions available</p>
+              <p className="text-sm mt-1 text-slate-500">Login as admin to create an attendance session</p>
+            </div>
           ) : (
-            <div className="p-2 border-2 flex flex-col gap-4 rounded-md border-purple-600">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {attendanceLists.map((list, index) => (
-                <div
-                  onClick={() => {
-                    setSelectedList(list);
-                    // scroller.scrollTo('dashboard', {
-                    //   smooth: true,
-                    //   offset: -100
-                    // })
-                  }}
+                <motion.div
                   key={index}
-                  className="w-full p-4 bg-gray-100 rounded-md cursor-pointer flex gap-8 font-medium justify-between"
+                  whileHover={{ y: -2 }}
+                  onClick={() => setSelectedList(list)}
+                  className="card cursor-pointer border-2 border-transparent hover:border-violet-300 transition-all"
                 >
-                  <p>{list?.fileName}</p>
-                  <p className="flex items-center gap-2">
-                    {list?.attendees?.length}{" "}
-                    <FaUser className="text-purple-600" />
-                  </p>
-                </div>
+                  <p className="font-semibold text-slate-800 text-sm truncate mb-1">{list?.fileName}</p>
+                  <p className="text-xs text-slate-500 mb-3">{list?.date}</p>
+                  <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+                    <FaUser size={11} className="text-violet-400" />
+                    {list?.attendees?.length ?? 0} attendees
+                  </div>
+                </motion.div>
               ))}
             </div>
           )}

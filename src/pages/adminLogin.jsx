@@ -1,14 +1,13 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import {
-  databaseKeys,
-  deleteFromDatabase,
-  loadFromDatabase,
-} from "../utils/database";
+import { databaseKeys, loadFromDatabase } from "../utils/database";
 import { useAdminContext } from "../context/adminContext";
 import LoadingScreen from "../components/loadingScreen";
 import { comparePassword } from "../utils/brcrypt";
+import { FiLock, FiUser } from "react-icons/fi";
+import { RiAdminLine } from "react-icons/ri";
+
 const AdminLogin = () => {
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
@@ -22,8 +21,8 @@ const AdminLogin = () => {
 
     try {
       const rawAdmins = await loadFromDatabase(databaseKeys.ADMIN);
+      if (!rawAdmins) { toast.error("No admin accounts found."); return; }
       const admins = Object.values(rawAdmins);
-      console.log(admins)
 
       const user = await Promise.all(
         admins.map(async (admin) => {
@@ -35,6 +34,10 @@ const AdminLogin = () => {
       const validUser = user.find((u) => u !== null);
 
       if (validUser) {
+        if (!validUser.verified) {
+          toast.error("Your account is pending approval. Please wait for a super-admin to verify you in Firebase.");
+          return;
+        }
         setPassword("");
         setUsername("");
         localStorage.setItem("admin", JSON.stringify(validUser));
@@ -52,53 +55,65 @@ const AdminLogin = () => {
     }
   };
 
-
   return (
-    <div className="h-full w-full flex items-center justify-center">
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4">
       {loading && <LoadingScreen />}
-      <form
-        onSubmit={handleLogin}
-        className="max-w-md w-full bg-white p-8 rounded shadow"
-      >
-        <h1 className="text-2xl font-bold text-purple-600 mb-6 text-center">
-          Admin Login
-        </h1>
-
-        <div className="mb-4">
-          <label className="block mb-2 text-sm font-medium text-gray-900">
-            Username
-          </label>
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Enter your username"
-            required
-            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block w-full p-2.5"
-          />
+      <div className="w-full max-w-md">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-violet-100 mb-4">
+            <RiAdminLine className="text-violet-600" size={28} />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-800">Admin Login</h1>
+          <p className="text-sm text-slate-500 mt-1">Sign in to manage the attendance system</p>
         </div>
 
-        <div className="mb-6">
-          <label className="block mb-2 text-sm font-medium text-gray-900">
-            Password
-          </label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter your password"
-            required
-            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block w-full p-2.5"
-          />
+        {/* Card */}
+        <div className="card">
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Username</label>
+              <div className="relative">
+                <FiUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter your username"
+                  required
+                  className="input pl-10"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+              <div className="relative">
+                <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  required
+                  className="input pl-10"
+                />
+              </div>
+            </div>
+
+            <button type="submit" className="btn-primary w-full mt-2">
+              Sign In
+            </button>
+          </form>
         </div>
 
-        <button
-          type="submit"
-          className="text-white bg-purple-600 hover:bg-purple-700 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-lg text-sm w-full px-5 py-2.5 text-center"
-        >
-          Login
-        </button>
-      </form>
+        <p className="text-center text-sm text-slate-500 mt-5">
+          Don&apos;t have an account?{" "}
+          <Link to="/admin-sign-up" className="text-violet-600 font-semibold hover:underline">
+            Create one
+          </Link>
+        </p>
+      </div>
     </div>
   );
 };

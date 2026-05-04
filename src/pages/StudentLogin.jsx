@@ -1,87 +1,76 @@
 // src/pages/StudentLogin.jsx
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { FiHash, FiLogIn } from "react-icons/fi";
+import { databaseKeys, loadFromDatabase } from "../utils/database";
+import { toast } from "react-toastify";
+import LoadingScreen from "../components/loadingScreen";
 
 const StudentLogin = () => {
   const [matricNo, setMatricNo] = useState("");
-  const [attendanceData, setAttendanceData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  // Mock data for demonstration purposes
-  const mockData = {
-    name: "John Doe",
-    matricNo: "STD001",
-    attendance: [
-      { date: "2023-08-01", status: "Present" },
-      { date: "2023-08-02", status: "Absent" },
-    ],
-  };
-
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    // In a real app, replace this with an API call
-    setAttendanceData(mockData);
+    if (!matricNo.trim()) return;
+    setLoading(true);
+
+    try {
+      const students = (await loadFromDatabase(databaseKeys.STUDENTS)) || [];
+      const student = students.find(
+        (s) => s.matricNo?.trim().toLowerCase() === matricNo.trim().toLowerCase()
+      );
+
+      if (!student) {
+        toast.error("Matric number not found. Please register first.");
+        return;
+      }
+
+      sessionStorage.setItem("student", JSON.stringify(student));
+      navigate(`/student/dashboard/${encodeURIComponent(student.matricNo)}`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="max-w-2xl mx-auto min-h-screen">
-      <h1 className="text-2xl font-bold text-purple-600 mb-6">
-        Student Attendance Portal
-      </h1>
-
-      <form
-        onSubmit={handleLogin}
-        className="bg-white p-6 rounded-xl shadow-lg space-y-6"
-      >
-        <div>
-          <label className="block text-gray-700 mb-2">Matric Number</label>
-          <input
-            type="text"
-            value={matricNo}
-            onChange={(e) => setMatricNo(e.target.value)}
-            className="w-full p-2 border rounded-lg"
-          />
-        </div>
-
-        <button
-          type="submit"
-          className="w-full bg-purple-600 text-white p-3 rounded-lg hover:bg-purple-700"
-        >
-          View Attendance
-        </button>
-      </form>
-
-      {attendanceData && (
-        <div className="mt-8 bg-white p-6 rounded-xl shadow-lg">
-          <h2 className="text-xl font-bold mb-4">{attendanceData.name}</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-purple-50">
-                  <th className="p-3 text-left">Date</th>
-                  <th className="p-3 text-left">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {attendanceData.attendance.map((entry, index) => (
-                  <tr key={index} className="border-b">
-                    <td className="p-3">{entry.date}</td>
-                    <td className="p-3">
-                      <span
-                        className={`px-2 py-1 rounded ${
-                          entry.status === "Present"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {entry.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4">
+      {loading && <LoadingScreen />}
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-violet-100 mb-4">
+            <FiLogIn className="text-violet-600" size={26} />
           </div>
+          <h1 className="text-2xl font-bold text-slate-800">Student Portal</h1>
+          <p className="text-sm text-slate-500 mt-1">Enter your matric number to access your dashboard</p>
         </div>
-      )}
+
+        <div className="card">
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Matric Number</label>
+              <div className="relative">
+                <FiHash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+                <input
+                  type="text"
+                  value={matricNo}
+                  onChange={(e) => setMatricNo(e.target.value)}
+                  placeholder="e.g. CSC/2021/001"
+                  required
+                  className="input pl-10 font-mono"
+                />
+              </div>
+            </div>
+            <button type="submit" className="btn-primary w-full flex items-center justify-center gap-2">
+              <FiLogIn size={15} /> Continue
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 };

@@ -5,6 +5,7 @@ export const databaseKeys = {
   ATTENDANCE: "attendance",
   STUDENTS: "students",
   DEPARTMENTS: "departments",
+  LECTURERS: "lecturers",
   ADMIN: "admin",
   LAST_CAMERA_ACTIVE_TIMESTAMP: "lastCameraActiveTimestamp",
   COURSES: "courses",
@@ -21,7 +22,7 @@ export const saveToDatabase = async (key, newData) => {
     const snapshot = await get(child(dbRef, key));
     let existingData = snapshot.exists() ? snapshot.val() : null;
 
-    if (Array.isArray(existingData) || ['departments', 'students', 'attendance'].includes(key)) {
+    if (Array.isArray(existingData) || ['departments', 'lecturers', 'students', 'attendance'].includes(key)) {
       if (!existingData) {
         existingData = []
       }
@@ -142,6 +143,7 @@ export const findItemById = async (key, id) => {
   try {
     const data = await loadFromDatabase(key);
 
+    if (!data) return null;
     return data[id] || null;
   } catch (error) {
     console.error("❌ Error in findItemById:", error);

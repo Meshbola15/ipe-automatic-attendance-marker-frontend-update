@@ -1,9 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect } from "react";
 import * as faceapi from "face-api.js";
 
-const FaceRecognition = ({ videoRef, registerFace, recognizeFace }) => {
-  const canvasRef = useRef(null);
-  const [status, setStatus] = useState("Waiting...");
+const FaceRecognition = ({ videoRef }) => {
 
   useEffect(() => {
     const loadModels = async () => {

@@ -2,146 +2,105 @@
 import React, { useState, useEffect } from "react";
 import {
   databaseKeys,
-  findItemById,
   loadFromDatabase,
   removeFromDatabase,
   saveToDatabase,
-  updateInDatabase,
 } from "../utils/database";
 import { toast } from "react-toastify";
 import { useAdminContext } from "../context/adminContext";
-import TimeInput from "../components/timeInput";
-import { FiPlus, FiDownload } from "react-icons/fi";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { uid } from "uid";
 import LoadingScreen from "../components/loadingScreen";
 import AttendanceManagement from "../components/attendanceManagement";
-import NewAttendanceModal from "../components/newAttendanceModal";
+import ConfirmModal from "../components/ConfirmModal";
 
 const AdminPage = () => {
   const params = useParams();
   const { id } = params;
   const [departments, setDepartments] = useState([]);
-  const [newDepartment, setNewDepartment] = useState("");
+  const [newDeptName, setNewDeptName] = useState("");
+  const [newDeptLevels, setNewDeptLevels] = useState("100L, 200L, 300L, 400L");
+  const [lecturers, setLecturers] = useState([]);
   const [attendanceData, setAttendanceData] = useState([]);
   const [saving, setSaving] = useState(false);
-  const [selectedDepartment, setSelectedDepartment] = useState("");
-  const [showNewAttendanceModal, setShowNewAttendanceModal] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState("0h 0m 0s");
   const [openAttendance, setOpenAttendance] = useState({});
-  // const [loading, setLoading] = useState(false);
+  const [confirm, setConfirm] = useState(null);
 
-  const {
-    isCameraActive,
-    setIsCameraActive,
-    setCurrentFileName,
-    currentFileName,
-    updateLastCameraActiveTimeStamp,
-    adminDetails,
-    loading,
-  } = useAdminContext();
+  const { adminDetails, loading } = useAdminContext();
 
-  const navigate = useNavigate();
-
-  const getAttendanceLists = async () => {
-    const savedDepartments =
-      (await loadFromDatabase(databaseKeys.DEPARTMENTS)) || [];
-
-    const normalizedDepartments = Array.isArray(savedDepartments)
-      ? savedDepartments
-      : [];
-
-    setDepartments(normalizedDepartments);
-
-    if (normalizedDepartments.length > 0 && !selectedDepartment) {
-      setSelectedDepartment(normalizedDepartments[0]);
-    }
+  const fetchData = async () => {
+    const savedDepts = (await loadFromDatabase(databaseKeys.DEPARTMENTS)) || [];
+    setDepartments(Array.isArray(savedDepts) ? savedDepts : []);
+    const savedLecturers = (await loadFromDatabase(databaseKeys.LECTURERS)) || [];
+    setLecturers(Array.isArray(savedLecturers) ? savedLecturers : []);
     const data = (await loadFromDatabase(databaseKeys.ATTENDANCE)) || [];
     setAttendanceData(Array.isArray(data) ? data : []);
   };
 
   useEffect(() => {
-    getAttendanceLists();
+    fetchData();
   }, []);
 
-  const formatTime = (totalSeconds) => {
-    const h = Math.floor(totalSeconds / 3600);
-    const m = Math.floor((totalSeconds % 3600) / 60);
-    const s = totalSeconds % 60;
-    return `${h}h ${m}m ${s}s`;
-  };
-
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      if (!adminDetails.id) return;
-      const admin = await findItemById(databaseKeys.ADMIN, adminDetails.id);
-
-      const lastTimestamp = admin?.cameraLastActiveTime;
-      // console.log("lastTimestamp", lastTimestamp);
-
-      if (lastTimestamp) {
-        const diff = Math.max(
-          Math.floor((+lastTimestamp - Date.now()) / 1000),
-          0
-        );
-        setTimeRemaining(formatTime(diff));
-        if (diff <= 0 && isCameraActive) {
-          setIsCameraActive(false);
-        }
-      } else {
-        setTimeRemaining("0h 0m 0s");
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [isCameraActive]);
-
-  const handleCameraToggle = async () => {
-    const active = !isCameraActive;
-    setIsCameraActive(active);
-
-    active
-      ? updateLastCameraActiveTimeStamp()
-      : await updateInDatabase(databaseKeys.ADMIN, adminDetails.id, {
-        ...adminDetails,
-        cameraLastActiveTime: null,
-      });
-  };
-
   const handleAddDepartment = async () => {
-    if (!newDepartment.trim()) {
-      toast.error("Department name cannot be empty");
-      return;
-    }
-
-    if (departments.map((d) => d.name).includes(newDepartment)) {
-      toast.error("Department already exists!");
-      return;
-    }
-
-    const newDepartmentObject = {
-      id: uid(),
-      name: newDepartment,
-    };
-
-    const updated = [...departments, newDepartmentObject];
-
-    setDepartments(updated);
-
-    // 🔥 Save the **whole array** instead of one object
-    await saveToDatabase(databaseKeys.DEPARTMENTS, newDepartmentObject);
-
+    if (!newDeptName.trim()) { toast.error("Department name cannot be empty"); return; }
+    if (departments.map((d) => d.name).includes(newDeptName.trim())) { toast.error("Department already exists!"); return; }
+    const levelsArr = newDeptLevels.split(",").map((l) => l.trim()).filter(Boolean);
+    if (levelsArr.length === 0) { toast.error("Add at least one level"); return; }
+    const obj = { id: uid(), name: newDeptName.trim(), levels: levelsArr };
+    setDepartments((p) => [...p, obj]);
+    await saveToDatabase(databaseKeys.DEPARTMENTS, obj);
     toast.success("Department added successfully");
-    setNewDepartment("");
-    getAttendanceLists(); // Refresh from DB
+    setNewDeptName("");
+    setNewDeptLevels("100L, 200L, 300L, 400L");
   };
 
+  const handleRemoveDepartment = (id) => {
+    const dept = departments.find((d) => d.id === id);
+    setConfirm({
+      title: "Remove Department?",
+      message: `"${dept?.name}" will be permanently deleted. This cannot be undone.`,
+      confirmLabel: "Remove",
+      onConfirm: async () => {
+        await removeFromDatabase(databaseKeys.DEPARTMENTS, id);
+        toast.success("Department removed successfully");
+        fetchData();
+      },
+    });
+  };
 
-  // fix this code aspect, i can't seem to figure it out
+  const handleAddLevelToDept = async (dept, newLvl) => {
+    if (!newLvl.trim()) return;
+    if ((dept.levels || []).includes(newLvl.trim())) { toast.error("Level already exists in this department"); return; }
+    const updated = { ...dept, levels: [...(dept.levels || []), newLvl.trim()] };
+    await saveToDatabase(databaseKeys.DEPARTMENTS, updated);
+    fetchData();
+  };
 
-  const handleRemovedepartment = async (id) => {
-    await removeFromDatabase(databaseKeys.DEPARTMENTS, id);
-    toast.success("Department removed successfully");
-    getAttendanceLists(); // Optional, only if needed to refresh from DB
+  const handleRemoveLevelFromDept = async (dept, lvl) => {
+    const updated = { ...dept, levels: (dept.levels || []).filter((l) => l !== lvl) };
+    await saveToDatabase(databaseKeys.DEPARTMENTS, updated);
+    fetchData();
+  };
+
+  const handleApproveLecturer = async (lecturer) => {
+    const updated = { ...lecturer, status: "approved" };
+    await saveToDatabase(databaseKeys.LECTURERS, updated);
+    toast.success(`${lecturer.username} approved`);
+    fetchData();
+  };
+
+  const handleRejectLecturer = (lecturer) => {
+    setConfirm({
+      title: "Reject Application?",
+      message: `Reject the application from "${lecturer.username}"? They will not be able to log in.`,
+      confirmLabel: "Reject",
+      onConfirm: async () => {
+        const updated = { ...lecturer, status: "rejected" };
+        await saveToDatabase(databaseKeys.LECTURERS, updated);
+        toast.success(`${lecturer.username} rejected`);
+        fetchData();
+      },
+    });
   };
 
   const toggleOpen = (fileName) => {
@@ -149,45 +108,32 @@ const AdminPage = () => {
   };
 
   const handleStudentStatusChange = (record, idx, newStatus) => {
-    const updated = record.attendees.map((a, i) =>
+    const updatedAttendees = record.attendees.map((a, i) =>
       i === idx ? { ...a, status: newStatus } : a
     );
 
+    const updatedRecord = { ...record, attendees: updatedAttendees };
+
     const updatedData = attendanceData.map((att) =>
-      att.id === record.id ? { ...att, attendees: updated } : att
+      att.id === record.id ? updatedRecord : att
     );
 
     setAttendanceData(updatedData);
-    saveToDatabase(databaseKeys.ATTENDANCE, updatedData);
+    saveToDatabase(databaseKeys.ATTENDANCE, updatedRecord);
   };
 
   const sortedAttendance = [...attendanceData].sort(
     (a, b) => new Date(`${b.date} ${b.time}`) - new Date(`${a.date} ${a.time}`)
   );
 
-  const handleAttendanceSubmit = async (e) => {
-    e.preventDefault();
-    if (!currentFileName || !selectedDepartment) {
-      toast.error("Please provide file name and select a department");
-      return;
-    }
-
-    const newConfig = {
-      id: uid(),
-      fileName: `${currentFileName}-${new Date().toLocaleDateString()}-${selectedDepartment}`,
-      department: selectedDepartment,
-      date: new Date().toLocaleDateString(),
-      time: new Date().toLocaleTimeString(),
-      status: "active",
-      attendees: [],
-    };
-
-    const updated = [...attendanceData, newConfig];
-    setAttendanceData(updated);
-    await saveToDatabase(databaseKeys.ATTENDANCE, newConfig);
-    getAttendanceLists();
-    toast.success("Attendance created successfully!");
-    setShowNewAttendanceModal(false);
+  const handleCloseSession = async (record) => {
+    const updatedAttendees = (record.attendees || []).map((a) =>
+      a.status === "Pending" ? { ...a, status: "Unverified" } : a
+    );
+    const closed = { ...record, status: "closed", closesAt: Date.now(), attendees: updatedAttendees };
+    await saveToDatabase(databaseKeys.ATTENDANCE, closed);
+    toast.success(`Session "${record.fileName}" closed. Pending entries marked Unverified.`);
+    fetchData();
   };
 
   const handleExportAttendance = (index) => {
@@ -206,102 +152,179 @@ const AdminPage = () => {
     setSaving(false);
   };
 
-  // console.log(departments);
+  if (!id) return <div>Admin not found</div>;
 
-  if (!id) {
-    return <div>Admin not found</div>;
-  }
+  const pendingLecturers = lecturers.filter((l) => l.status === "pending");
 
   return (
-    <div className=" min-h-screen p-4 py-6 mt-6 md:p-8 text-white space-y-6 w-full m-0">
+    <div className="w-full space-y-6">
       {loading && <LoadingScreen />}
-      <section className="grid grid-cols-1  lg:grid-cols-3 gap-6 w-full">
-        <div className="bg-white rounded-2xl col-span-1 shadow-lg p-4 md:p-6 w-full flex flex-col items-center justify-center gap-4">
-          <h2 className="text-lg font-bold text-black">Camera Control</h2>
-          <p className="text-black">Camera Time (in minutes):</p>
-          <TimeInput />
-          <p className="text-black">Time Remaining: {timeRemaining}</p>
-          <button
-            className={`px-4 py-2 text-white rounded-md w-full ${isCameraActive ? "bg-red-400" : "bg-green-600"
-              }`}
-            onClick={handleCameraToggle}
-          >
-            {isCameraActive ? "Turn Off Camera" : "Turn On Camera"}
-          </button>
 
-          {isCameraActive && (
-            <button
-              onClick={() => navigate(`/admin/camera/${adminDetails.id}`)}
-              className="px-4 py-2 text-white rounded-md w-full bg-green-600"
-            >
-              Open Camera
-            </button>
-          )}
+      {/* Page header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="page-title">Admin Dashboard</h1>
+          <p className="page-subtitle !mb-0">
+            Welcome back,{" "}
+            <span className="font-semibold text-violet-600">{adminDetails?.username || "Admin"}</span>
+          </p>
         </div>
+        {pendingLecturers.length > 0 && (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+            {pendingLecturers.length} pending lecturer application{pendingLecturers.length !== 1 ? "s" : ""}
+          </span>
+        )}
+      </div>
 
-        {/* department Management Section */}
-        <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl shadow-lg p-4 md:p-6 w-full">
-          <h2 className="text-lg font-bold text-black mb-4">
-            Department Management
-          </h2>
-          <div className="flex flex-col sm:flex-row gap-4">
+      {/* Dept Management */}
+      <section className="grid grid-cols-1 gap-5">
+        <div className="card">
+          <h2 className="text-sm font-bold text-slate-800 mb-4">Departments</h2>
+
+          {/* Add new dept */}
+          <div className="space-y-2 mb-5 p-4 bg-slate-50 rounded-xl border border-slate-100">
+            <p className="text-xs font-semibold text-slate-600 mb-2">Add New Department</p>
             <input
               type="text"
-              placeholder="Enter Department Name"
-              value={newDepartment}
-              onChange={(e) => setNewDepartment(e.target.value)}
-              className="p-2 bg-white border border-gray-400 rounded-md flex-1 text-black outline-green-500"
+              placeholder="Department name e.g. Computer Science"
+              value={newDeptName}
+              onChange={(e) => setNewDeptName(e.target.value)}
+              className="input"
             />
-            <button
-              className="bg-green-600 px-4 py-2 rounded-md text-white"
-              onClick={handleAddDepartment}
-            >
-              Add Department
-            </button>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Levels (comma-separated) e.g. 100L, 200L, 300L"
+                value={newDeptLevels}
+                onChange={(e) => setNewDeptLevels(e.target.value)}
+                className="input flex-1 text-sm"
+              />
+              <button className="btn-success flex-shrink-0" onClick={handleAddDepartment}>Add</button>
+            </div>
           </div>
-          <ul className="mt-4 rounded-md divide-y divide-gray-500">
-            {departments.map((department, index) => (
-              <li
-                key={index}
-                className="flex justify-between items-center p-2 bg-white rounded-md text-black"
-              >
-                <span>{department.name}</span>
-                <span className="flex items-center gap-4">
-                  <button
-                    className="text-red-500"
-                    onClick={() => handleRemovedepartment(department?.id)}
-                  >
-                    Remove
-                  </button>
-                </span>
-              </li>
-            ))}
-          </ul>
+
+          {/* Dept list */}
+          {departments.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-4">No departments yet</p>
+          ) : (
+            <div className="space-y-3">
+              {departments.map((dept) => (
+                <DeptCard key={dept.id} dept={dept} onRemoveDept={handleRemoveDepartment} onAddLevel={handleAddLevelToDept} onRemoveLevel={handleRemoveLevelFromDept} setConfirm={setConfirm} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Attendance Management Section */}
+      {/* Lecturer Applications */}
+      <section className="card">
+        <h2 className="text-sm font-bold text-slate-800 mb-4">Lecturer Applications</h2>
+        {lecturers.length === 0 ? (
+          <p className="text-sm text-slate-400 text-center py-6">No applications yet</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[500px]">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-100">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Username</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Departments</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Status</th>
+                  <th className="px-4 py-3 w-32"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {lecturers.map((lec) => (
+                  <tr key={lec.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 text-sm font-medium text-slate-800">{lec.username}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {(lec.departments || []).map((d) => (
+                          <span key={d} className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-violet-50 text-violet-600 border border-violet-100">{d}</span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
+                        lec.status === "approved" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                        lec.status === "rejected" ? "bg-red-50 text-red-600 border-red-200" :
+                        "bg-amber-50 text-amber-700 border-amber-200"
+                      }`}>{lec.status}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {lec.status === "pending" && (
+                        <div className="flex gap-2">
+                          <button onClick={() => handleApproveLecturer(lec)} className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors">Approve</button>
+                          <button onClick={() => handleRejectLecturer(lec)} className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors">Reject</button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* Attendance Management Section — admin view of ALL sessions */}
       <AttendanceManagement
         sortedAttendance={sortedAttendance}
         handleExportAttendance={handleExportAttendance}
         handleStudentStatusChange={handleStudentStatusChange}
         saving={saving}
         openAttendance={openAttendance}
-        setShowNewAttendanceModal={setShowNewAttendanceModal}
+        setShowNewAttendanceModal={null}
         toggleOpen={toggleOpen}
+        handleCloseSession={handleCloseSession}
       />
 
-      {/* New Attendance Modal */}
-      {showNewAttendanceModal && (
-        <NewAttendanceModal
-          setShowNewAttendanceModal={setShowNewAttendanceModal}
-          handleAttendanceSubmit={handleAttendanceSubmit}
-          selectedDepartment={selectedDepartment}
-          setSelectedDepartment={setSelectedDepartment}
-          departments={departments}
-          currentFileName={currentFileName}
-          setCurrentFileName={setCurrentFileName}
-        />
+      <ConfirmModal
+        open={!!confirm}
+        title={confirm?.title}
+        message={confirm?.message}
+        confirmLabel={confirm?.confirmLabel}
+        confirmClass="btn-danger"
+        onConfirm={() => { confirm?.onConfirm(); setConfirm(null); }}
+        onCancel={() => setConfirm(null)}
+      />
+    </div>
+  );
+};
+
+// Sub-component: expandable department card with inline level management
+const DeptCard = ({ dept, onRemoveDept, onAddLevel, onRemoveLevel, setConfirm }) => {
+  const [expanded, setExpanded] = useState(false);
+  const [newLvl, setNewLvl] = useState("");
+  return (
+    <div className="border border-slate-100 rounded-xl overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-slate-50" onClick={() => setExpanded((p) => !p)}>
+        <div className="flex items-center gap-2.5">
+          <div className="w-2 h-2 rounded-full bg-violet-400" />
+          <span className="text-sm font-semibold text-slate-700">{dept.name}</span>
+          <span className="text-xs text-slate-400">{(dept.levels || []).length} level{(dept.levels || []).length !== 1 ? "s" : ""}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={(e) => { e.stopPropagation(); onRemoveDept(dept.id); }} className="text-xs text-red-500 hover:text-red-700 font-medium hover:bg-red-50 px-2 py-1 rounded-lg transition-colors">Remove</button>
+          <span className="text-slate-400 text-xs">{expanded ? "▲" : "▼"}</span>
+        </div>
+      </div>
+      {expanded && (
+        <div className="px-4 pb-4 pt-1 border-t border-slate-100 bg-slate-50/50">
+          <div className="flex flex-wrap gap-2 mb-3">
+            {(dept.levels || []).map((lvl) => (
+              <span key={lvl} className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700">
+                {lvl}
+                <button onClick={() => setConfirm({ title: "Remove Level?", message: `Remove "${lvl}" from ${dept.name}?`, confirmLabel: "Remove", onConfirm: () => onRemoveLevel(dept, lvl) })} className="text-slate-400 hover:text-red-500 transition-colors leading-none">&times;</button>
+              </span>
+            ))}
+            {(dept.levels || []).length === 0 && <span className="text-xs text-slate-400">No levels yet</span>}
+          </div>
+          <div className="flex gap-2">
+            <input type="text" value={newLvl} onChange={(e) => setNewLvl(e.target.value)} placeholder="Add level e.g. 500L" className="input flex-1 text-sm !py-1.5" onKeyDown={(e) => { if (e.key === "Enter") { onAddLevel(dept, newLvl); setNewLvl(""); }}} />
+            <button onClick={() => { onAddLevel(dept, newLvl); setNewLvl(""); }} className="btn-success text-xs !px-3 !py-1.5 flex-shrink-0">Add</button>
+          </div>
+        </div>
       )}
     </div>
   );

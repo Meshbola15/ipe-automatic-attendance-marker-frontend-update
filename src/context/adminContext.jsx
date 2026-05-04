@@ -4,64 +4,14 @@ import { toast } from "react-toastify";
 import {
   databaseKeys,
   findItemById,
-  updateInDatabase,
 } from "../utils/database";
 
 export const AdminContext = React.createContext();
 
 const AdminContextProvider = ({ children }) => {
-  const [isCameraActive, setIsCameraActive] = useState(true);
-  const [currentFileName, setCurrentFileName] = useState("");
-  const [cameraTimeString, setCameraTimeString] = useState("02:00:00");
-  const [hasNotified, setHasNotified] = useState(false);
   const [adminDetails, setAdminDetails] = useState({});
   const [loading, setLoading] = useState(false);
 
-  const convertTimeStringToSeconds = (timeStr) => {
-    const [hours, minutes, seconds] = timeStr.split(":").map(Number);
-    return hours * 3600 + minutes * 60 + seconds;
-  };
-
-  const updateLastCameraActiveTimeStamp = async () => {
-    if (!adminDetails?.id) return;
-
-    const expiryTime =
-      Date.now() + convertTimeStringToSeconds(cameraTimeString) * 1000;
-
-    await updateInDatabase(databaseKeys.ADMIN, adminDetails.id, {
-      ...adminDetails,
-      cameraLastActiveTime: expiryTime,
-    });
-
-    setHasNotified(false);
-  };
-
-  const onCameraTimeExhausted = () => {
-    if (!hasNotified) {
-      toast.info("Camera time has been exhausted.");
-      setHasNotified(true);
-      return
-    }
-    // setIsCameraActive(false);
-  };
-
-  const checkCameraTimeExhausted = async () => {
-    if (!adminDetails.id) return;
-
-    const userData = await findItemById(databaseKeys.ADMIN, adminDetails?.id);
-    if (!userData?.cameraLastActiveTime) return;
-
-    const currentTime = Date.now();
-
-    if (currentTime >= userData.cameraLastActiveTime) {
-      onCameraTimeExhausted();
-      return
-    } else {
-      setIsCameraActive(true);
-    }
-  };
-
-  // 👇 Load admin from localStorage once on mount
   useEffect(() => {
     const fetchAdmin = async () => {
       setLoading(true);
@@ -84,20 +34,9 @@ const AdminContextProvider = ({ children }) => {
   }, []);
 
 
-  useEffect(() => {
-    if (adminDetails?.id) checkCameraTimeExhausted();
-  }, [adminDetails.id]); 
-
   return (
     <AdminContext.Provider
       value={{
-        isCameraActive,
-        setIsCameraActive,
-        currentFileName,
-        setCurrentFileName,
-        cameraTimeString,
-        setCameraTimeString,
-        updateLastCameraActiveTimeStamp,
         adminDetails,
         setAdminDetails,
         loading,
