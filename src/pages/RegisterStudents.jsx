@@ -10,9 +10,11 @@ import { uid } from "uid";
 import useSound from "use-sound";
 import successSound from "../assets/sound.mp3";
 import LoadingScreen from "../components/loadingScreen";
-import { FiUserPlus, FiUser, FiHash, FiBook } from "react-icons/fi";
+import { FiUserPlus, FiUser, FiHash, FiBook, FiArrowLeft } from "react-icons/fi";
+import { useNavigate } from "react-router-dom";
 
 const RegisterStudent = () => {
+  const navigate = useNavigate();
   const [play] = useSound(successSound);
   const validationSchema = Yup.object({
     name: Yup.string().required("Name is required"),
@@ -94,6 +96,9 @@ const RegisterStudent = () => {
     <div className="w-full max-w-2xl mx-auto px-0 sm:px-4 md:px-0">
       {loading && <LoadingScreen />}
 
+      <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-5 transition-colors">
+        <FiArrowLeft size={15} /> Back
+      </button>
       {/* Header */}
       <div className="mb-6">
         <h1 className="page-title">Register Student</h1>

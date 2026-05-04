@@ -1,19 +1,29 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { databaseKeys, loadFromDatabase } from "../utils/database";
 import { useAdminContext } from "../context/adminContext";
 import LoadingScreen from "../components/loadingScreen";
 import { comparePassword } from "../utils/brcrypt";
-import { FiLock, FiUser } from "react-icons/fi";
+import { FiLock, FiUser, FiArrowLeft } from "react-icons/fi";
 import { RiAdminLine } from "react-icons/ri";
 
 const AdminLogin = () => {
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { setAdminDetails } = useAdminContext();
+
+  useEffect(() => {
+    const saved = localStorage.getItem("admin_remembered");
+    if (saved) {
+      const { username: u } = JSON.parse(saved);
+      setUsername(u);
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -40,6 +50,11 @@ const AdminLogin = () => {
         }
         setPassword("");
         setUsername("");
+        if (rememberMe) {
+          localStorage.setItem("admin_remembered", JSON.stringify({ username: validUser.username }));
+        } else {
+          localStorage.removeItem("admin_remembered");
+        }
         localStorage.setItem("admin", JSON.stringify(validUser));
         setAdminDetails(validUser);
         navigate(`/admin/dashboard/${validUser.id}`);
@@ -59,6 +74,9 @@ const AdminLogin = () => {
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4">
       {loading && <LoadingScreen />}
       <div className="w-full max-w-md">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-6 transition-colors">
+          <FiArrowLeft size={15} /> Back
+        </button>
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-violet-100 mb-4">
@@ -100,6 +118,16 @@ const AdminLogin = () => {
                 />
               </div>
             </div>
+
+            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-violet-600 cursor-pointer"
+              />
+              <span className="text-sm text-slate-600">Remember me</span>
+            </label>
 
             <button type="submit" className="btn-primary w-full mt-2">
               Sign In

@@ -6,7 +6,7 @@ import { toast } from "react-toastify";
 import { databaseKeys, loadFromDatabase, saveToDatabase } from "../utils/database";
 import {
   FiLogOut, FiClock, FiHash, FiBook, FiInbox,
-  FiCheckCircle, FiAlertCircle, FiCalendar, FiRefreshCw,
+  FiCheckCircle, FiAlertCircle, FiCalendar, FiRefreshCw, FiArrowLeft,
 } from "react-icons/fi";
 import LoadingScreen from "../components/loadingScreen";
 
@@ -130,6 +130,9 @@ const StudentDashboard = () => {
   return (
     <div className="w-full">
       {loading && <LoadingScreen />}
+      <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-5 transition-colors">
+        <FiArrowLeft size={15} /> Back
+      </button>
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">

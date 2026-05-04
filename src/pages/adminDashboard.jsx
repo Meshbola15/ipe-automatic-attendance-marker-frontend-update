@@ -6,6 +6,7 @@ import {
   removeFromDatabase,
   saveToDatabase,
 } from "../utils/database";
+import { FiPlus, FiArrowLeft, FiLogOut } from "react-icons/fi";
 import { toast } from "react-toastify";
 import { useAdminContext } from "../context/adminContext";
 import { useParams } from "react-router-dom";
@@ -156,25 +157,40 @@ const AdminPage = () => {
 
   const pendingLecturers = lecturers.filter((l) => l.status === "pending");
 
+  const handleLogout = () => {
+    localStorage.removeItem("admin");
+    navigate("/admin");
+  };
+
   return (
     <div className="w-full space-y-6">
       {loading && <LoadingScreen />}
 
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="page-title">Admin Dashboard</h1>
-          <p className="page-subtitle !mb-0">
-            Welcome back,{" "}
-            <span className="font-semibold text-violet-600">{adminDetails?.username || "Admin"}</span>
-          </p>
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors">
+            <FiArrowLeft size={15} /> Back
+          </button>
+          <div>
+            <h1 className="page-title">Admin Dashboard</h1>
+            <p className="page-subtitle !mb-0">
+              Welcome back,{" "}
+              <span className="font-semibold text-violet-600">{adminDetails?.username || "Admin"}</span>
+            </p>
+          </div>
         </div>
-        {pendingLecturers.length > 0 && (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-            {pendingLecturers.length} pending lecturer application{pendingLecturers.length !== 1 ? "s" : ""}
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          {pendingLecturers.length > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+              {pendingLecturers.length} pending application{pendingLecturers.length !== 1 ? "s" : ""}
+            </span>
+          )}
+          <button onClick={handleLogout} className="btn-danger flex items-center gap-1.5 text-xs !py-1.5">
+            <FiLogOut size={13} /> Logout
+          </button>
+        </div>
       </div>
 
       {/* Dept Management */}

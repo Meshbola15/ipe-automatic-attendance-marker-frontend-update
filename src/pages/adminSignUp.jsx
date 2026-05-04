@@ -5,7 +5,7 @@ import { toast } from "react-toastify";
 import { databaseKeys, loadFromDatabase, saveToDatabase } from "../utils/database";
 import { v4 as uuidv4 } from "uuid";
 import { hashPassword } from "../utils/brcrypt";
-import { FiLock, FiUser } from "react-icons/fi";
+import { FiLock, FiUser, FiArrowLeft } from "react-icons/fi";
 import { RiAdminLine } from "react-icons/ri";
 import LoadingScreen from "../components/loadingScreen";
 
@@ -82,6 +82,9 @@ const AdminSignUp = () => {
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4">
       {loading && <LoadingScreen />}
       <div className="w-full max-w-md">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-6 transition-colors">
+          <FiArrowLeft size={15} /> Back
+        </button>
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-violet-100 mb-4">

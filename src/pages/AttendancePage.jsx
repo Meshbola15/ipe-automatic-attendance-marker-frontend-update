@@ -2,9 +2,11 @@
 import { useEffect, useState } from "react";
 import { loadFromDatabase, databaseKeys } from "../utils/database";
 import { exportToCSV } from "../utils/exportCSV";
-import { FiCalendar, FiClock, FiUser, FiHash, FiDownload, FiChevronUp, FiChevronDown, FiInbox } from "react-icons/fi";
+import { FiCalendar, FiClock, FiUser, FiHash, FiDownload, FiChevronUp, FiChevronDown, FiInbox, FiArrowLeft } from "react-icons/fi";
+import { useNavigate } from "react-router-dom";
 
 const AttendancePage = () => {
+  const navigate = useNavigate();
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sortConfig, setSortConfig] = useState({ key: "date", direction: "desc" });
@@ -60,6 +62,9 @@ const AttendancePage = () => {
 
   return (
     <div className="w-full">
+      <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-5 transition-colors">
+        <FiArrowLeft size={15} /> Back
+      </button>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>

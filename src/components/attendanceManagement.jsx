@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { FiDownload, FiPlus, FiChevronDown, FiChevronUp, FiInbox, FiLock, FiCheckSquare } from "react-icons/fi";
+import React, { useState, useMemo } from "react";
+import { FiDownload, FiPlus, FiChevronDown, FiChevronUp, FiInbox, FiLock, FiCheckSquare, FiSearch, FiFilter } from "react-icons/fi";
 import ConfirmModal from "./ConfirmModal";
 
 const STATUS_CLASSES = {
@@ -29,6 +29,50 @@ const AttendanceManagement = ({
   const [selectedStudents, setSelectedStudents] = useState({});
   const [bulkStatus, setBulkStatus] = useState({});
   const [closeTarget, setCloseTarget] = useState(null);
+  const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterDept, setFilterDept] = useState("");
+  const [sortOrder, setSortOrder] = useState("desc");
+
+  const allDepts = useMemo(() => {
+    const depts = [...new Set(sortedAttendance.map((s) => s.department).filter(Boolean))];
+    return depts.sort();
+  }, [sortedAttendance]);
+
+  const processed = useMemo(() => {
+    let list = [...sortedAttendance];
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((s) =>
+        s.fileName?.toLowerCase().includes(q) ||
+        s.department?.toLowerCase().includes(q) ||
+        s.level?.toLowerCase().includes(q)
+      );
+    }
+    if (filterDept) list = list.filter((s) => s.department === filterDept);
+    if (filterStatus === "open") list = list.filter((s) => isSessionOpen(s));
+    if (filterStatus === "closed") list = list.filter((s) => !isSessionOpen(s));
+    list.sort((a, b) => {
+      const da = new Date(`${a.date} ${a.time}`);
+      const db = new Date(`${b.date} ${b.time}`);
+      return sortOrder === "desc" ? db - da : da - db;
+    });
+    return list;
+  }, [sortedAttendance, search, filterDept, filterStatus, sortOrder]);
+
+  const groupedByLevel = useMemo(() => {
+    const groups = {};
+    processed.forEach((s) => {
+      const lvl = s.level || "No Level";
+      if (!groups[lvl]) groups[lvl] = [];
+      groups[lvl].push(s);
+    });
+    return Object.keys(groups).sort().map((level) => ({ level, sessions: groups[level] }));
+  }, [processed]);
+
+  const [openLevels, setOpenLevels] = useState(() => ({}));
+  const toggleLevel = (lvl) => setOpenLevels((p) => ({ ...p, [lvl]: !p[lvl] }));
+  const isLevelOpen = (lvl) => openLevels[lvl] !== false;
 
   const getSelected = (sessionId) => selectedStudents[sessionId] || new Set();
 
@@ -62,10 +106,10 @@ const AttendanceManagement = ({
   return (
     <div className="card">
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-base font-bold text-slate-800">Attendance Sessions</h2>
-          <p className="text-xs text-slate-500 mt-0.5">{sortedAttendance.length} session{sortedAttendance.length !== 1 ? "s" : ""}</p>
+          <p className="text-xs text-slate-500 mt-0.5">{processed.length} of {sortedAttendance.length} session{sortedAttendance.length !== 1 ? "s" : ""}</p>
         </div>
         {setShowNewAttendanceModal && (
           <button
@@ -77,15 +121,72 @@ const AttendanceManagement = ({
         )}
       </div>
 
+      {/* Filters bar */}
+      <div className="flex flex-wrap gap-2 mb-5">
+        <div className="relative flex-1 min-w-36">
+          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={13} />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search sessions…"
+            className="input !py-1.5 pl-8 text-xs"
+          />
+        </div>
+        {allDepts.length > 1 && (
+          <select value={filterDept} onChange={(e) => setFilterDept(e.target.value)} className="input !py-1.5 !px-2 text-xs w-36">
+            <option value="">All departments</option>
+            {allDepts.map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
+        )}
+        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="input !py-1.5 !px-2 text-xs w-28">
+          <option value="">All status</option>
+          <option value="open">Open</option>
+          <option value="closed">Closed</option>
+        </select>
+        <button
+          onClick={() => setSortOrder((o) => o === "desc" ? "asc" : "desc")}
+          className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors"
+          title="Toggle sort order"
+        >
+          <FiFilter size={12} />
+          {sortOrder === "desc" ? "Newest first" : "Oldest first"}
+        </button>
+      </div>
+
       {/* List */}
       {sortedAttendance.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-slate-400">
           <FiInbox size={36} className="mb-3 opacity-40" />
           <p className="text-sm text-slate-500">No attendance sessions yet</p>
         </div>
+      ) : processed.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+          <FiSearch size={36} className="mb-3 opacity-40" />
+          <p className="text-sm text-slate-500">No sessions match your filters</p>
+        </div>
       ) : (
         <div className="space-y-3">
-          {sortedAttendance.map((attendance, index) => {
+          {groupedByLevel.map(({ level, sessions }) => (
+            <div key={level} className="border border-slate-200 rounded-xl overflow-hidden">
+              {/* Level accordion header */}
+              <button
+                type="button"
+                onClick={() => toggleLevel(level)}
+                className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">{level}</span>
+                  <span className="text-xs text-slate-500">{sessions.length} session{sessions.length !== 1 ? "s" : ""}</span>
+                </div>
+                <span className="text-slate-400">{isLevelOpen(level) ? <FiChevronUp size={15} /> : <FiChevronDown size={15} />}</span>
+              </button>
+
+              {/* Sessions inside level */}
+              {isLevelOpen(level) && (
+                <div className="p-3 space-y-2">
+          {sessions.map((attendance) => {
+            const index = sortedAttendance.indexOf(attendance);
             const presentCount = attendance?.attendees?.filter(a => a.status === "Present")?.length ?? 0;
             const pendingCount = attendance?.attendees?.filter(a => a.status === "Pending")?.length ?? 0;
             const totalCount = attendance?.attendees?.length ?? 0;
@@ -95,7 +196,7 @@ const AttendanceManagement = ({
             const allSelected = totalCount > 0 && selected.size === totalCount;
 
             return (
-              <div key={index} className="border border-slate-100 rounded-xl overflow-hidden">
+              <div key={attendance.id || index} className="border border-slate-100 rounded-xl overflow-hidden">
                 {/* Row header */}
                 <div
                   className="flex items-start justify-between px-4 py-3.5 cursor-pointer hover:bg-slate-50 transition-colors gap-2"
@@ -257,6 +358,10 @@ const AttendanceManagement = ({
               </div>
             );
           })}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
       <ConfirmModal

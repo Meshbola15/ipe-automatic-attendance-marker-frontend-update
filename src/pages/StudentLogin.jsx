@@ -1,15 +1,24 @@
 // src/pages/StudentLogin.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiHash, FiLogIn } from "react-icons/fi";
+import { FiHash, FiLogIn, FiArrowLeft } from "react-icons/fi";
 import { databaseKeys, loadFromDatabase } from "../utils/database";
 import { toast } from "react-toastify";
 import LoadingScreen from "../components/loadingScreen";
 
 const StudentLogin = () => {
   const [matricNo, setMatricNo] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const saved = localStorage.getItem("student_remembered");
+    if (saved) {
+      setMatricNo(JSON.parse(saved).matricNo);
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -27,6 +36,11 @@ const StudentLogin = () => {
         return;
       }
 
+      if (rememberMe) {
+        localStorage.setItem("student_remembered", JSON.stringify({ matricNo: student.matricNo }));
+      } else {
+        localStorage.removeItem("student_remembered");
+      }
       sessionStorage.setItem("student", JSON.stringify(student));
       navigate(`/student/dashboard/${encodeURIComponent(student.matricNo)}`);
     } catch (err) {
@@ -41,6 +55,9 @@ const StudentLogin = () => {
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4">
       {loading && <LoadingScreen />}
       <div className="w-full max-w-md">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-6 transition-colors">
+          <FiArrowLeft size={15} /> Back
+        </button>
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-violet-100 mb-4">
             <FiLogIn className="text-violet-600" size={26} />
@@ -65,6 +82,15 @@ const StudentLogin = () => {
                 />
               </div>
             </div>
+            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-violet-600 cursor-pointer"
+              />
+              <span className="text-sm text-slate-600">Remember me</span>
+            </label>
             <button type="submit" className="btn-primary w-full flex items-center justify-center gap-2">
               <FiLogIn size={15} /> Continue
             </button>
