@@ -9,7 +9,7 @@ import {
 import { FiPlus, FiArrowLeft, FiLogOut } from "react-icons/fi";
 import { toast } from "react-toastify";
 import { useAdminContext } from "../context/adminContext";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { uid } from "uid";
 import LoadingScreen from "../components/loadingScreen";
 import AttendanceManagement from "../components/attendanceManagement";
@@ -18,6 +18,7 @@ import ConfirmModal from "../components/ConfirmModal";
 const AdminPage = () => {
   const params = useParams();
   const { id } = params;
+  const navigate = useNavigate();
   const [departments, setDepartments] = useState([]);
   const [newDeptName, setNewDeptName] = useState("");
   const [newDeptLevels, setNewDeptLevels] = useState("100L, 200L, 300L, 400L");

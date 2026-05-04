@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { loadFromDatabase, databaseKeys } from "../utils/database";
-import { FiUsers, FiChevronRight, FiArrowLeft, FiClock, FiHash, FiCalendar, FiInbox } from "react-icons/fi";
+import { FiUsers, FiChevronRight, FiArrowLeft, FiClock, FiHash, FiCalendar, FiInbox, FiCheckCircle, FiBook } from "react-icons/fi";
 import { Link } from "react-router-dom";
 
 const Dashboard = () => {
@@ -51,19 +51,28 @@ const Dashboard = () => {
 
             {/* Stats row */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
-              <div className="card !p-4">
-                <p className="text-xs text-slate-500 mb-1">Total Attendees</p>
-                <p className="text-2xl font-bold text-slate-800">{selectedList?.attendees?.length ?? 0}</p>
+              <div className="stat-card">
+                <div className="w-8 h-8 rounded-xl bg-violet-100 flex items-center justify-center mb-2">
+                  <FiUsers size={15} className="text-violet-600" />
+                </div>
+                <p className="text-xs text-slate-500">Total Attendees</p>
+                <p className="text-2xl font-bold text-slate-900">{selectedList?.attendees?.length ?? 0}</p>
               </div>
-              <div className="card !p-4">
-                <p className="text-xs text-slate-500 mb-1">Present</p>
+              <div className="stat-card">
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center mb-2">
+                  <FiCheckCircle size={15} className="text-emerald-600" />
+                </div>
+                <p className="text-xs text-slate-500">Present</p>
                 <p className="text-2xl font-bold text-emerald-600">
                   {selectedList?.attendees?.filter(a => a.status === "Present").length ?? 0}
                 </p>
               </div>
-              <div className="card !p-4 col-span-2 sm:col-span-1">
-                <p className="text-xs text-slate-500 mb-1">Department</p>
-                <p className="text-sm font-semibold text-slate-700 truncate">{selectedList?.department || "—"}</p>
+              <div className="stat-card col-span-2 sm:col-span-1">
+                <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center mb-2">
+                  <FiBook size={15} className="text-blue-600" />
+                </div>
+                <p className="text-xs text-slate-500">Department</p>
+                <p className="text-sm font-semibold text-slate-700 truncate mt-1">{selectedList?.department || "—"}</p>
               </div>
             </div>
 
@@ -127,9 +136,9 @@ const Dashboard = () => {
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="mb-6">
+            <div className="mb-7">
               <h1 className="page-title">Dashboard</h1>
-              <p className="page-subtitle">Select an attendance session to view its entries</p>
+              <p className="page-subtitle">Overview of all attendance sessions</p>
             </div>
 
             {loadingLists ? (
@@ -156,33 +165,49 @@ const Dashboard = () => {
 
 const ListGrid = ({ lists, onSelect, selected }) => (
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-    {lists.map((list, index) => (
-      <motion.div
-        key={index}
-        whileHover={{ y: -2 }}
-        onClick={() => onSelect(list)}
-        className={`card cursor-pointer border-2 transition-all duration-150 ${
-          selected?.id === list.id ? "border-violet-500 shadow-md" : "border-transparent hover:border-violet-200"
-        }`}
-      >
-        <div className="flex items-start justify-between mb-3">
-          <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center">
-            <FiCalendar className="text-violet-600" size={16} />
+    {lists.map((list, index) => {
+      const presentCount = list?.attendees?.filter(a => a.status === "Present").length ?? 0;
+      const totalCount = list?.attendees?.length ?? 0;
+      const pct = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
+      const isSelected = selected?.id === list.id;
+      return (
+        <motion.div
+          key={index}
+          whileHover={{ y: -3, transition: { duration: 0.15 } }}
+          onClick={() => onSelect(list)}
+          className="bg-white rounded-2xl cursor-pointer transition-all duration-200 overflow-hidden"
+          style={{
+            boxShadow: isSelected
+              ? "0 0 0 2px #7c3aed, 0 4px 16px rgba(124,58,237,0.15)"
+              : "0 1px 4px 0 rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)",
+          }}
+        >
+          {/* Top colour bar */}
+          <div className="h-1 w-full" style={{ background: isSelected ? "#7c3aed" : "linear-gradient(90deg, #7c3aed 0%, #6d28d9 100%)", opacity: isSelected ? 1 : 0.25 }} />
+          <div className="p-5">
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center">
+                <FiCalendar className="text-violet-600" size={15} />
+              </div>
+              <FiChevronRight className={`mt-1 transition-colors ${isSelected ? "text-violet-500" : "text-slate-300"}`} size={16} />
+            </div>
+            <p className="font-semibold text-slate-900 text-sm mb-1 truncate">{list?.fileName}</p>
+            <div className="flex flex-wrap items-center gap-1.5 mb-3">
+              <span className="text-xs text-slate-400 flex items-center gap-1"><FiCalendar size={10}/>{list?.date}</span>
+              {list?.department && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-600 border border-violet-100">{list.department}</span>}
+              {list?.level && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-600 border border-emerald-100">{list.level}</span>}
+            </div>
+            {/* Progress bar */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${pct}%` }} />
+              </div>
+              <span className="text-xs font-semibold text-slate-500 flex-shrink-0">{presentCount}/{totalCount}</span>
+            </div>
           </div>
-          <FiChevronRight className="text-slate-300" size={18} />
-        </div>
-        <p className="font-semibold text-slate-800 text-sm truncate">{list?.fileName}</p>
-        <div className="flex flex-wrap items-center gap-1.5 mb-2">
-          <span className="text-xs text-slate-500">{list?.date}</span>
-          {list?.department && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-violet-50 text-violet-600 border border-violet-100">{list.department}</span>}
-          {list?.level && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-100">{list.level}</span>}
-        </div>
-        <div className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
-          <FiUsers size={13} className="text-violet-400" />
-          {list?.attendees?.length ?? 0} attendee{list?.attendees?.length !== 1 ? "s" : ""}
-        </div>
-      </motion.div>
-    ))}
+        </motion.div>
+      );
+    })}
   </div>
 );
 

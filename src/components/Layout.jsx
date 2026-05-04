@@ -31,11 +31,11 @@ const Layout = ({ children }) => {
       : location.pathname.startsWith(path);
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="min-h-screen flex" style={{ background: "#f4f5f8" }}>
       {/* Mobile overlay */}
       {isMobileMenuOpen && (
         <div
-          className="md:hidden fixed inset-0 bg-black/40 z-[90]"
+          className="md:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[90]"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
@@ -43,32 +43,40 @@ const Layout = ({ children }) => {
       {/* Mobile Menu Toggle Button */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="md:hidden fixed top-4 left-4 z-[110] bg-violet-600 text-white p-2.5 rounded-xl shadow-lg"
+        className="md:hidden fixed top-4 left-4 z-[110] bg-violet-600 text-white p-2.5 rounded-xl shadow-lg shadow-violet-500/30"
       >
         {isMobileMenuOpen ? <FiX size={20} /> : <FiMenu size={20} />}
       </button>
 
       {/* Sidebar */}
       <aside
-        className={`bg-gradient-to-b from-violet-900 to-violet-800 text-white w-64 fixed h-full flex flex-col transition-transform duration-300 z-[100] shadow-2xl ${
+        className={`w-64 fixed h-full flex flex-col transition-transform duration-300 z-[100] ${
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0`}
+        style={{
+          background: "linear-gradient(180deg, #1e1b4b 0%, #2e1065 100%)",
+          boxShadow: "4px 0 24px rgba(0,0,0,0.18)",
+        }}
       >
         {/* Brand */}
-        <div className="px-6 py-7 border-b border-violet-700/50">
+        <div className="px-5 py-6">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
+              style={{ background: "rgba(255,255,255,0.12)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.15)" }}>
               <img src={backgroundImage} alt="IPE Logo" className="w-6 h-6 object-contain" />
             </div>
             <div>
-              <p className="text-[11px] font-medium text-violet-300 uppercase tracking-widest leading-none mb-0.5">IPE</p>
-              <h2 className="text-[15px] font-bold leading-none">Attendance System</h2>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] leading-none mb-1" style={{ color: "rgba(167,139,250,0.8)" }}>IPE System</p>
+              <h2 className="text-[14px] font-bold leading-none text-white">Attendance Marker</h2>
             </div>
           </div>
         </div>
 
+        {/* Divider */}
+        <div className="mx-5 mb-4" style={{ height: 1, background: "rgba(255,255,255,0.07)" }} />
+
         {/* Nav */}
-        <nav className="flex-1 px-3 py-5 space-y-1">
+        <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
           {navItems.map((item) => {
             const active = isActive(item.to);
             return (
@@ -76,18 +84,25 @@ const Layout = ({ children }) => {
                 key={item.to}
                 to={item.to}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
-                  active
-                    ? "bg-white/20 text-white shadow-sm"
-                    : "text-violet-200 hover:bg-white/10 hover:text-white"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150 relative group ${
+                  active ? "text-white" : "text-violet-300/70 hover:text-white"
                 }`}
+                style={active ? {
+                  background: "rgba(255,255,255,0.12)",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.1)",
+                } : {}}
               >
-                <span className={active ? "text-white" : "text-violet-300"}>
+                {active && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-violet-400" />
+                )}
+                <span className={`flex-shrink-0 transition-colors ${
+                  active ? "text-violet-300" : "text-violet-400/60 group-hover:text-violet-300"
+                }`}>
                   {item.icon}
                 </span>
-                {item.text}
+                <span className="truncate">{item.text}</span>
                 {active && (
-                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white" />
+                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0" />
                 )}
               </Link>
             );
@@ -95,22 +110,24 @@ const Layout = ({ children }) => {
         </nav>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-violet-700/50">
-          <p className="text-[11px] text-violet-400 text-center">
-            © {new Date().getFullYear()} IPE &mdash; Attendance Marker
+        <div className="mx-5 mt-4" style={{ height: 1, background: "rgba(255,255,255,0.07)" }} />
+        <div className="px-5 py-4 flex items-center justify-between">
+          <p className="text-[11px] font-medium" style={{ color: "rgba(167,139,250,0.5)" }}>
+            © {new Date().getFullYear()} IPE
           </p>
+          <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: "rgba(167,139,250,0.15)", color: "rgba(167,139,250,0.8)" }}>v2.0</span>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 md:ml-64 min-h-screen relative bg-slate-50">
+      <main className="flex-1 md:ml-64 min-h-screen relative">
         {/* Watermark */}
         <div
-          className="pointer-events-none absolute inset-0 bg-no-repeat bg-center bg-contain"
-          style={{ backgroundImage: `url(${backgroundImage})`, opacity: 0.04, zIndex: 0 }}
+          className="pointer-events-none fixed inset-0 md:left-64 bg-no-repeat bg-center bg-contain"
+          style={{ backgroundImage: `url(${backgroundImage})`, opacity: 0.025, zIndex: 0 }}
         />
         {/* Content */}
-        <div className="relative z-10 p-5 pt-16 md:pt-8 md:p-8">{children}</div>
+        <div className="relative z-10 p-5 pt-16 md:pt-8 md:p-8 md:pl-10">{children}</div>
       </main>
     </div>
   );

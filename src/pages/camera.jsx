@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 // eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
 import useSound from "use-sound";
@@ -12,10 +12,12 @@ import {
 import CameraWidget from "../components/CameraWidget";
 import { toast } from "react-toastify";
 import { FaUser } from "react-icons/fa6";
+import { FiArrowLeft } from "react-icons/fi";
 import * as faceapi from "face-api.js";
 
 const CameraPage = () => {
   const { id: lecturerId } = useParams();
+  const navigate = useNavigate();
   const [play] = useSound(successSound);
   const videoRef = useRef(null);
   const [allAttendanceLists, setAllAttendanceLists] = useState([]);
@@ -165,6 +167,9 @@ const CameraPage = () => {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
             <div>
+              <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-2 transition-colors">
+                <FiArrowLeft size={15} /> Back
+              </button>
               <h1 className="page-title">Camera — Attendance Scanner</h1>
               <p className="page-subtitle !mb-0">
                 Session: <span className="font-semibold text-violet-600">{selectedList?.fileName}</span>
@@ -268,6 +273,9 @@ const CameraPage = () => {
         </>
       ) : (
         <div>
+          <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-5 transition-colors">
+            <FiArrowLeft size={15} /> Back
+          </button>
           <div className="mb-6">
             <h1 className="page-title">Camera — Attendance Scanner</h1>
             <p className="page-subtitle">Select an attendance session to begin marking</p>

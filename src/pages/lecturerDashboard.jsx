@@ -12,7 +12,7 @@ import {
 import AttendanceManagement from "../components/attendanceManagement";
 import NewAttendanceModal from "../components/newAttendanceModal";
 import LoadingScreen from "../components/loadingScreen";
-import { FiPlus } from "react-icons/fi";
+import { FiPlus, FiArrowLeft, FiLogOut } from "react-icons/fi";
 
 const LecturerDashboard = () => {
   const { id } = useParams();
@@ -128,25 +128,40 @@ const LecturerDashboard = () => {
     setOpenAttendance((prev) => ({ ...prev, [fileName]: !prev[fileName] }));
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("lecturer");
+    navigate("/lecturer");
+  };
+
   return (
     <div className="w-full space-y-6">
       {loading && <LoadingScreen />}
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="page-title">Lecturer Dashboard</h1>
-          <p className="page-subtitle !mb-0">
-            Welcome,{" "}
-            <span className="font-semibold text-emerald-600">{lecturerDetails?.username || "Lecturer"}</span>
-          </p>
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors">
+            <FiArrowLeft size={15} /> Back
+          </button>
+          <div>
+            <h1 className="page-title">Lecturer Dashboard</h1>
+            <p className="page-subtitle !mb-0">
+              Welcome,{" "}
+              <span className="font-semibold text-emerald-600">{lecturerDetails?.username || "Lecturer"}</span>
+            </p>
+          </div>
         </div>
-        <button
-          onClick={() => navigate(`/lecturer/camera/${id}`)}
-          className="btn-primary flex items-center gap-2 self-start sm:self-auto"
-        >
-          Open Camera
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate(`/lecturer/camera/${id}`)}
+            className="btn-primary flex items-center gap-2 self-start sm:self-auto"
+          >
+            Open Camera
+          </button>
+          <button onClick={handleLogout} className="btn-danger flex items-center gap-1.5 text-xs !py-1.5">
+            <FiLogOut size={13} /> Logout
+          </button>
+        </div>
       </div>
 
       {/* Dept scope info */}
