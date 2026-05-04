@@ -1,23 +1,19 @@
 // src/pages/StudentsPage.jsx
 import { useEffect, useState } from "react";
-import { loadFromDatabase, databaseKeys, removeFromDatabase } from "../utils/database";
+import { loadFromDatabase, databaseKeys } from "../utils/database";
 import { exportToCSV } from "../utils/exportCSV";
 import { toast } from "react-toastify";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  FiDownload, FiSearch, FiInbox, FiTrash2,
+  FiDownload, FiSearch, FiInbox,
   FiArrowLeft, FiUsers, FiChevronRight,
 } from "react-icons/fi";
-import ConfirmModal from "../components/ConfirmModal";
 
 const StudentsPage = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedDept, setSelectedDept] = useState(null);
-  const [deletingId, setDeletingId] = useState(null);
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const isAdmin = !!localStorage.getItem("admin");
 
   const fetchStudents = async () => {
     setLoading(true);
@@ -52,22 +48,6 @@ const StudentsPage = () => {
     exportToCSV(data, `students${suffix}.csv`);
   };
 
-  const handleDelete = (student) => setDeleteTarget(student);
-
-  const confirmDelete = async () => {
-    if (!deleteTarget) return;
-    setDeletingId(deleteTarget.id);
-    setDeleteTarget(null);
-    try {
-      await removeFromDatabase(databaseKeys.STUDENTS, deleteTarget.id);
-      toast.success(`${deleteTarget.name} removed successfully.`);
-      await fetchStudents();
-    } catch {
-      toast.error("Failed to remove student.");
-    } finally {
-      setDeletingId(null);
-    }
-  };
 
   const view = !selectedDept ? "depts" : "students";
 
@@ -146,7 +126,6 @@ const StudentsPage = () => {
                         <th className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">#</th>
                         <th className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Student</th>
                         <th className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Matric Number</th>
-                        {isAdmin && <th className="px-5 py-3.5 w-10" />}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
@@ -160,13 +139,6 @@ const StudentsPage = () => {
                             </div>
                           </td>
                           <td className="px-5 py-3.5 text-sm text-slate-600 font-mono">{student.matricNo}</td>
-                          {isAdmin && (
-                            <td className="px-5 py-3.5">
-                              <button onClick={() => handleDelete(student)} disabled={deletingId === student.id} className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-40" title="Remove student">
-                                {deletingId === student.id ? <div className="w-3.5 h-3.5 rounded-full border-2 border-red-300 border-t-red-500 animate-spin" /> : <FiTrash2 size={14} />}
-                              </button>
-                            </td>
-                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -184,15 +156,6 @@ const StudentsPage = () => {
 
       </AnimatePresence>
 
-      <ConfirmModal
-        open={!!deleteTarget}
-        title="Remove Student?"
-        message={`Remove ${deleteTarget?.name} (${deleteTarget?.matricNo}) from the system? This cannot be undone.`}
-        confirmLabel="Remove"
-        confirmClass="btn-danger"
-        onConfirm={confirmDelete}
-        onCancel={() => setDeleteTarget(null)}
-      />
     </div>
   );
 };
